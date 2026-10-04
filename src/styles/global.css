@@ -253,7 +253,7 @@ textarea {
   margin-bottom: var(--space-4);
 }
 
-.field label {
+.field label:not(.switch) {
   display: block;
   font-weight: 600;
   margin-bottom: var(--space-1);
@@ -335,6 +335,7 @@ textarea {
   gap: var(--space-2);
   cursor: pointer;
   user-select: none;
+  position: relative;
 }
 
 .switch input {
