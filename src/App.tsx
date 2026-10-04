@@ -1,5 +1,6 @@
 import { Route, Routes } from 'react-router-dom'
 import Home from './pages/public/Home'
+import FindRecord from './pages/public/FindRecord'
 import StudentProgress from './pages/public/StudentProgress'
 import Certificate from './pages/public/Certificate'
 import UsefulDocs from './pages/public/UsefulDocs'
@@ -16,11 +17,13 @@ import Tips from './pages/admin/Tips'
 import Codes from './pages/admin/Codes'
 import ExportCsv from './pages/admin/ExportCsv'
 import Docs from './pages/admin/Docs'
+import Enquiries from './pages/admin/Enquiries'
 
 export default function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route path="/record" element={<FindRecord />} />
       <Route path="/record/:studentId" element={<StudentProgress />} />
       <Route path="/certificate/:studentId" element={<Certificate />} />
       <Route path="/docs" element={<UsefulDocs />} />
@@ -38,6 +41,7 @@ export default function App() {
         <Route path="admin/codes" element={<Codes />} />
         <Route path="admin/export" element={<ExportCsv />} />
         <Route path="admin/docs" element={<Docs />} />
+        <Route path="admin/enquiries" element={<Enquiries />} />
       </Route>
 
       <Route path="*" element={<Home />} />

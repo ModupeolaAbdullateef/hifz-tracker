@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import SiteHeader from '../../components/SiteHeader'
+import PublicNav from '../../components/PublicNav'
 import { ErrorBanner } from '../../components/LoadingAndEmpty'
 import { useAuth } from '../../context/AuthContext'
 
@@ -30,8 +31,9 @@ export default function Login() {
     <div className="app-shell">
       <SiteHeader />
       <main className="page page--narrow">
+        <PublicNav />
         <div className="card">
-          <h2>Staff login</h2>
+          <h2>Staff / Admin login</h2>
           <form onSubmit={handleSubmit}>
             <div className="field">
               <label htmlFor="name">Your name</label>

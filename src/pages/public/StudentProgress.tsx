@@ -4,10 +4,7 @@ import SiteHeader from '../../components/SiteHeader'
 import TipsMarquee from '../../components/TipsMarquee'
 import PublicNav from '../../components/PublicNav'
 import WeeklyGrid from '../../components/WeeklyGrid'
-import ProgressRing from '../../components/ProgressRing'
-import StatCard from '../../components/StatCard'
-import BarChart from '../../components/BarChart'
-import BadgeRow from '../../components/BadgeRow'
+import StudentSummary from '../../components/StudentSummary'
 import { ErrorBanner, LoadingState } from '../../components/LoadingAndEmpty'
 import { getActiveTips, getStudentRecord } from '../../lib/api'
 import { clearStudentSession, loadStudentSession, saveStudentSession } from '../../lib/session'
@@ -99,7 +96,7 @@ export default function StudentProgress() {
               </button>
             </form>
             <p className="text-center">
-              <Link to="/">Back to search</Link>
+              <Link to="/record">Back to search</Link>
             </p>
           </div>
         </main>
@@ -108,24 +105,12 @@ export default function StudentProgress() {
   }
 
   const currentWeek = getCurrentWeekNumber(bundle.weeks)
-  const { student, course, totals, badges } = bundle
+  const { student, course, totals } = bundle
   const hasTarget = !!(student.target_pages ?? course.target_pages)
   const target = student.target_pages ?? course.target_pages ?? 0
   const targetReached = hasTarget && totals.new_hifz_total >= target
   const courseFinished = currentWeek >= course.weeks
   const canCertificate = courseFinished || targetReached
-
-  const chartData = bundle.weeks
-    .filter((w) => !w.cancelled)
-    .map((w) => {
-      const rec = bundle.records.find((r) => r.week_number === w.week_number)
-      const val = rec && rec.status === 'present' ? Number(rec.values?.new_hifz ?? 0) : 0
-      return { label: `W${w.week_number}`, value: val }
-    })
-
-  const latestWithNote = [...bundle.records]
-    .filter((r) => r.note || r.next_assignment)
-    .sort((a, b) => b.week_number - a.week_number)[0]
 
   return (
     <div className="app-shell">
@@ -141,55 +126,17 @@ export default function StudentProgress() {
             className="btn btn-ghost btn-sm"
             onClick={() => {
               clearStudentSession()
-              navigate('/')
+              navigate('/record')
             }}
           >
             Exit
           </button>
         </div>
 
-        {totals.weeks_recorded === 0 ? (
-          <div className="card">
-            <p>No weeks recorded yet — your journey starts on Thursday 15 October, in sha Allah.</p>
-          </div>
-        ) : (
-          <>
-            <div className="stat-grid">
-              <StatCard value={totals.new_hifz_total} label="New Hifz total" />
-              <StatCard value={totals.old_hifz_total} label="Old Hifz total" />
-              <StatCard value={`${totals.weeks_present}/${totals.weeks_recorded}`} label="Attendance" />
-              <StatCard value={totals.good_weeks} label="Good weeks" />
-            </div>
-
-            {hasTarget && (
-              <div className="card text-center">
-                <ProgressRing value={totals.new_hifz_total} target={target} label="New Hifz vs target (pages)" />
-              </div>
-            )}
-
-            <div className="card">
-              <h3>New Hifz per week</h3>
-              <BarChart data={chartData} unit="pages" />
-            </div>
-
-            {latestWithNote && (
-              <div className="card">
-                <h3>Latest note</h3>
-                {latestWithNote.note && <p>{latestWithNote.note}</p>}
-                {latestWithNote.next_assignment && (
-                  <p>
-                    <strong>Next assignment:</strong> {latestWithNote.next_assignment}
-                  </p>
-                )}
-              </div>
-            )}
-
-            <div className="card">
-              <h3>Badges</h3>
-              <BadgeRow badges={badges} />
-            </div>
-          </>
-        )}
+        <StudentSummary
+          bundle={bundle}
+          emptyText="No weeks recorded yet — your journey starts on Thursday 15 October, in sha Allah."
+        />
 
         <div className="card">
           <h3>Weekly grid</h3>

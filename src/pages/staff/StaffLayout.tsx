@@ -36,6 +36,7 @@ export default function StaffLayout() {
           <NavLink to="/staff/overview">Class overview</NavLink>
           {isAdmin && (
             <>
+              <NavLink to="/staff/admin/enquiries">Enquiries</NavLink>
               <NavLink to="/staff/admin/students">Students</NavLink>
               <NavLink to="/staff/admin/course">Course</NavLink>
               <NavLink to="/staff/admin/fields">Fields</NavLink>

@@ -9,7 +9,7 @@ hosted on GitHub Pages via GitHub Actions.
 
 ## For teachers
 
-1. Go to the site and click **Staff login** at the bottom of the home page.
+1. Go to the site and click the **Staff / Admin login** tab.
 2. Enter your name and the **teacher access code** (ask the admin if you don't
    have it).
 3. **Find student**: search a student by name, tap their name, then tap
@@ -28,12 +28,13 @@ hosted on GitHub Pages via GitHub Actions.
 
 ## For students and parents
 
-1. Go to the site, type the student's first name under **Find my record**,
+1. Go to the site, open the **My Record** tab, type the student's first name,
    pick the right name, then enter the **student code** given by the teacher
    (e.g. `HZ-4821`).
 2. The progress page shows the weekly grid, totals, a progress ring against
-   the target (if one is set), a chart of New Hifz per week, the latest
-   teacher note and next assignment, and any badges earned.
+   the target (if one is set), a chart of New Hifz per week, all the
+   teacher notes and next assignments (newest first, each signed with the
+   name of the teacher who wrote it), and any badges earned.
 3. After week 10 (or once the target is reached), a **certificate** becomes
    available to view and print.
 4. The **Useful Docs** tab (next to "My Record") lists induction material and
@@ -44,6 +45,10 @@ hosted on GitHub Pages via GitHub Actions.
 Admin tabs appear automatically after logging in with the **admin access
 code** instead of the teacher code.
 
+- **Enquiries**: everyone who filled in the homepage interest form, newest
+  first. Mark each one contacted or archived, or delete it. Set the admin
+  email that gets notified of each new enquiry at the top of the tab (see
+  "Enquiry emails" below for the one-time setup).
 - **Students**: add a student (a code like `HZ-4821` is generated
   automatically), edit their name/join week/target, deactivate or reactivate
   them, or generate a new code if one is lost.
@@ -66,6 +71,27 @@ code** instead of the teacher code.
   outright (this also removes the underlying file from storage).
 - **Export**: download a CSV with one row per student per week and one
   column per field, for backup or reporting.
+
+### Editing the homepage
+
+All homepage text (hero, 10-week structure, success stories, gallery
+captions) lives in `src/content/home.ts`. The success stories are
+placeholders — replace them with real ones before going live. To add a
+gallery photo, put the image in `public/gallery/` and set
+`src: './gallery/your-photo.jpg'` on that item.
+
+### Enquiry emails
+
+Enquiries are always saved and shown on the Enquiries tab. To also get an
+email for each one:
+
+1. Create a free account at [resend.com](https://resend.com) and create an
+   API key.
+2. In the Supabase SQL Editor run
+   `select vault.create_secret('re_YOUR_KEY', 'resend_api_key');`
+3. On the admin **Enquiries** tab, set the notification email. Until you
+   verify your own domain in Resend, this must be the same address you
+   signed up to Resend with.
 
 ### Changing the brand colours or fonts
 

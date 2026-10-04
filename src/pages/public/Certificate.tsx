@@ -14,7 +14,7 @@ export default function Certificate() {
     if (!studentId) return
     const session = loadStudentSession()
     if (!session || session.studentId !== studentId) {
-      setError('Please open your record from the home page first.')
+      setError('Please open your record from the My Record tab first.')
       return
     }
     getStudentRecord(studentId, session.code)
@@ -26,7 +26,7 @@ export default function Certificate() {
     return (
       <main className="page page--narrow">
         <p className="error-banner">{error}</p>
-        <Link to="/">Back to home</Link>
+        <Link to="/record">Back to My Record</Link>
       </main>
     )
   }

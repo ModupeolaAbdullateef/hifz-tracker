@@ -1,140 +1,118 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import TipsMarquee from '../../components/TipsMarquee'
+import { Link } from 'react-router-dom'
 import SiteHeader from '../../components/SiteHeader'
+import TipsMarquee from '../../components/TipsMarquee'
 import PublicNav from '../../components/PublicNav'
-import { ErrorBanner } from '../../components/LoadingAndEmpty'
-import { getActiveTips, getStudentRecord, searchStudentsPublic } from '../../lib/api'
-import { saveStudentSession } from '../../lib/session'
-import type { StudentPublic, Tip } from '../../lib/types'
+import InterestForm from '../../components/InterestForm'
+import { getActiveTips } from '../../lib/api'
+import { GALLERY, HERO, HIGHLIGHTS, STORIES, STRUCTURE } from '../../content/home'
+import type { Tip } from '../../lib/types'
 
 export default function Home() {
-  const navigate = useNavigate()
   const [tips, setTips] = useState<Tip[]>([])
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState<StudentPublic[]>([])
-  const [selected, setSelected] = useState<StudentPublic | null>(null)
-  const [code, setCode] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-  const debounceRef = useRef<number | undefined>(undefined)
+  const formRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     getActiveTips().then(setTips).catch(() => setTips([]))
   }, [])
 
-  useEffect(() => {
-    window.clearTimeout(debounceRef.current)
-    if (query.trim().length < 2) {
-      setResults([])
-      return
-    }
-    debounceRef.current = window.setTimeout(async () => {
-      try {
-        const rows = await searchStudentsPublic(query.trim())
-        setResults(rows)
-      } catch {
-        setResults([])
-      }
-    }, 250)
-    return () => window.clearTimeout(debounceRef.current)
-  }, [query])
-
-  async function handleOpenRecord(e: React.FormEvent) {
-    e.preventDefault()
-    if (!selected) return
-    setBusy(true)
-    setError(null)
-    try {
-      await getStudentRecord(selected.id, code.trim())
-      saveStudentSession({ studentId: selected.id, code: code.trim() })
-      navigate(`/record/${selected.id}`)
-    } catch {
-      setError('That code did not match. Please check it and try again.')
-    } finally {
-      setBusy(false)
-    }
+  // The app uses HashRouter, so in-page #anchors would be read as routes —
+  // scroll to the form directly instead.
+  function scrollToForm() {
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   return (
     <div className="app-shell">
       <SiteHeader />
       <TipsMarquee tips={tips} />
-      <main className="page page--narrow">
+      <main className="page">
         <PublicNav />
-        <div className="card">
-          <h2>Find my record / Dod o hyd i fy nghofnod</h2>
-          {!selected && (
-            <div className="field">
-              <label htmlFor="search">Your first name</label>
-              <input
-                id="search"
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Start typing your name…"
-                autoComplete="off"
-              />
-              {results.length > 0 && (
-                <ul className="search-results">
-                  {results.map((r) => (
-                    <li key={r.id}>
-                      <button type="button" onClick={() => setSelected(r)}>
-                        {r.first_name} {r.last_initial}.
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {query.trim().length >= 2 && results.length === 0 && (
-                <p className="field-hint">No matching students found.</p>
-              )}
-            </div>
-          )}
 
-          {selected && (
-            <form onSubmit={handleOpenRecord}>
-              <p>
-                Hello, <strong>{selected.first_name} {selected.last_initial}.</strong> Enter your student code to
-                view your record.
-              </p>
-              <div className="field">
-                <label htmlFor="code">Student code</label>
-                <input
-                  id="code"
-                  type="text"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="HZ-4821"
-                  autoComplete="off"
-                  required
-                />
-                <p className="field-hint">Your teacher gave you this code — ask them if you've lost it.</p>
-              </div>
-              {error && <ErrorBanner text={error} />}
-              <div className="flex gap-2">
-                <button type="submit" className="btn btn-primary" disabled={busy}>
-                  {busy ? 'Checking…' : 'View my record'}
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  onClick={() => {
-                    setSelected(null)
-                    setCode('')
-                    setError(null)
-                  }}
-                >
-                  Back
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
+        <section className="hero">
+          <p className="hero__eyebrow">{HERO.eyebrow}</p>
+          <h2 className="hero__title">{HERO.title}</h2>
+          <p className="hero__subtitle">{HERO.subtitle}</p>
+          <div className="hero__actions">
+            <button type="button" className="btn btn-coral" onClick={scrollToForm}>
+              Register interest
+            </button>
+            <Link to="/record" className="btn btn-hero-ghost">
+              Already enrolled? View my record
+            </Link>
+          </div>
+        </section>
 
-        <p className="text-center muted">
-          Teacher or admin? <a href="#/staff/login">Staff login</a>
-        </p>
+        <section className="home-section">
+          <div className="highlight-grid">
+            {HIGHLIGHTS.map((h) => (
+              <div className="highlight" key={h.title}>
+                <div className="highlight__icon" aria-hidden="true">
+                  {h.icon}
+                </div>
+                <h3>{h.title}</h3>
+                <p className="muted">{h.text}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="home-section">
+          <h2 className="section-title">How the 10 weeks work</h2>
+          <p className="section-lede muted">Every week follows the same rhythm: recite, get feedback, set the next portion.</p>
+          <ol className="timeline">
+            {STRUCTURE.map((w) => (
+              <li className="timeline__item" key={w.weeks}>
+                <span className="timeline__weeks">{w.weeks}</span>
+                <div>
+                  <h3>{w.title}</h3>
+                  <p className="muted">{w.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="home-section">
+          <h2 className="section-title">Success stories</h2>
+          <div className="story-grid">
+            {STORIES.map((s) => (
+              <figure className="story" key={s.name}>
+                <span className="story__stat">{s.stat}</span>
+                <blockquote>“{s.quote}”</blockquote>
+                <figcaption>
+                  <strong>{s.name}</strong> · <span className="muted">{s.role}</span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+
+        <section className="home-section">
+          <h2 className="section-title">Gallery</h2>
+          <div className="gallery">
+            {GALLERY.map((g, i) => (
+              <figure className="gallery__item" key={g.caption}>
+                {g.src ? (
+                  <img src={g.src} alt={g.caption} loading="lazy" />
+                ) : (
+                  <div className={`gallery__placeholder gallery__placeholder--${i % 3}`}>
+                    <span>Photo coming soon</span>
+                  </div>
+                )}
+                <figcaption>{g.caption}</figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+
+        <section className="home-section" ref={formRef}>
+          <div className="card interest-card">
+            <h2 className="section-title mt-0">Interested in joining?</h2>
+            <p className="muted">Leave your details and the class admin will get back to you with dates and next steps.</p>
+            <InterestForm />
+          </div>
+        </section>
       </main>
       <footer className="site-footer">Hifz Class</footer>
     </div>

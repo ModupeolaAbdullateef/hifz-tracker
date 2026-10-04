@@ -74,6 +74,12 @@ create table if not exists weekly_records (
 create index if not exists idx_weekly_records_student on weekly_records (student_id);
 create index if not exists idx_weekly_records_week on weekly_records (week_number);
 
+-- Who wrote the note / next assignment. Kept separate from updated_by so a
+-- later edit to page counts doesn't re-attribute someone else's note.
+alter table weekly_records add column if not exists note_by text;
+update weekly_records set note_by = coalesce(updated_by, created_by)
+  where note_by is null and (note is not null or next_assignment is not null);
+
 create table if not exists badges (
   student_id uuid not null references students (id) on delete cascade,
   badge_key text not null,
@@ -460,10 +466,12 @@ begin
   select * into v_existing from weekly_records r where r.student_id = p_student_id and r.week_number = p_week_number;
 
   insert into weekly_records (
-    student_id, week_number, status, good_week, values, note, next_assignment, created_by, updated_by, created_at, updated_at
+    student_id, week_number, status, good_week, values, note, next_assignment, note_by,
+    created_by, updated_by, created_at, updated_at
   )
   values (
     p_student_id, p_week_number, p_status, p_good_week, v_values, p_note, p_next_assignment,
+    case when p_note is not null or p_next_assignment is not null then v_session.display_name end,
     v_session.display_name, v_session.display_name, v_now, v_now
   )
   on conflict (student_id, week_number) do update set
@@ -472,6 +480,13 @@ begin
     values = excluded.values,
     note = excluded.note,
     next_assignment = excluded.next_assignment,
+    note_by = case
+      when excluded.note is null and excluded.next_assignment is null then null
+      when weekly_records.note is distinct from excluded.note
+        or weekly_records.next_assignment is distinct from excluded.next_assignment
+        then excluded.updated_by
+      else weekly_records.note_by
+    end,
     updated_by = excluded.updated_by,
     updated_at = v_now;
 
@@ -1126,6 +1141,223 @@ create policy "resources_public_select" on storage.objects
   using (bucket_id = 'resources');
 
 -- ============================================================
+-- Interest form — public enquiries from the homepage.
+--
+-- Anyone can submit (rate-limited); only the admin can list/manage them.
+-- Each new submission emails the admin via Resend, sent from the database
+-- with pg_net so no server or edge function is needed. The email is
+-- skipped (but the submission is still saved) until BOTH:
+--   1. a notify email is set on the admin Enquiries tab, and
+--   2. a Resend API key is stored in Vault (see the bottom of this file).
+-- ============================================================
+
+create extension if not exists pg_net;
+
+alter table settings add column if not exists notify_email text;
+
+create table if not exists interest_submissions (
+  id uuid primary key default gen_random_uuid(),
+  full_name text not null,
+  email text not null,
+  phone text,
+  interested_for text not null default 'myself' check (interested_for in ('myself', 'my_child', 'other')),
+  message text,
+  status text not null default 'new' check (status in ('new', 'contacted', 'archived')),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_interest_created on interest_submissions (created_at desc);
+
+alter table interest_submissions enable row level security;
+revoke all on interest_submissions from anon, authenticated;
+
+create or replace function submit_interest(
+  p_full_name text, p_email text, p_phone text, p_interested_for text, p_message text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_email text := lower(trim(coalesce(p_email, '')));
+begin
+  if p_full_name is null or length(trim(p_full_name)) < 2 or length(p_full_name) > 120 then
+    raise exception 'Please enter your name.';
+  end if;
+
+  if v_email !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' or length(v_email) > 200 then
+    raise exception 'Please enter a valid email address.';
+  end if;
+
+  if length(coalesce(p_phone, '')) > 40 or length(coalesce(p_message, '')) > 2000 then
+    raise exception 'That message is too long.';
+  end if;
+
+  if coalesce(p_interested_for, 'myself') not in ('myself', 'my_child', 'other') then
+    raise exception 'Invalid option.';
+  end if;
+
+  -- Spam guard: 3 per email per day, 30 overall per hour.
+  if (select count(*) from interest_submissions where email = v_email and created_at > now() - interval '1 day') >= 3
+     or (select count(*) from interest_submissions where created_at > now() - interval '1 hour') >= 30 then
+    raise exception 'We have already received your details — the admin will be in touch soon.';
+  end if;
+
+  insert into interest_submissions (full_name, email, phone, interested_for, message)
+  values (
+    trim(p_full_name),
+    v_email,
+    nullif(trim(coalesce(p_phone, '')), ''),
+    coalesce(p_interested_for, 'myself'),
+    nullif(trim(coalesce(p_message, '')), '')
+  );
+end;
+$$;
+
+grant execute on function submit_interest(text, text, text, text, text) to anon;
+
+-- Trigger: email the admin about each new submission. Never blocks the
+-- insert — any failure (no key, Resend down) is swallowed. pg_net queues
+-- the request and sends it after the insert commits.
+create or replace function notify_admin_of_interest()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, extensions, pg_temp
+as $$
+declare
+  v_to text;
+  v_key text;
+  v_from text;
+begin
+  select notify_email into v_to from settings where id = 1;
+  if v_to is null or trim(v_to) = '' then
+    return new;
+  end if;
+
+  select decrypted_secret into v_key from vault.decrypted_secrets where name = 'resend_api_key' limit 1;
+  if v_key is null then
+    return new;
+  end if;
+
+  select decrypted_secret into v_from from vault.decrypted_secrets where name = 'resend_from' limit 1;
+
+  perform net.http_post(
+    url := 'https://api.resend.com/emails',
+    headers := jsonb_build_object('Authorization', 'Bearer ' || v_key, 'Content-Type', 'application/json'),
+    body := jsonb_build_object(
+      'from', coalesce(v_from, 'Hifz Class <onboarding@resend.dev>'),
+      'to', jsonb_build_array(v_to),
+      'reply_to', new.email,
+      'subject', 'New Hifz Class enquiry from ' || new.full_name,
+      'text',
+        'Someone has registered interest in the Hifz Class.' || E'\n\n' ||
+        'Name: ' || new.full_name || E'\n' ||
+        'Email: ' || new.email || E'\n' ||
+        'Phone: ' || coalesce(new.phone, '-') || E'\n' ||
+        'For: ' || replace(new.interested_for, '_', ' ') || E'\n' ||
+        'Message: ' || coalesce(new.message, '-') || E'\n\n' ||
+        'Reply to this email to contact them directly, or see all enquiries on the admin Enquiries tab.'
+    )
+  );
+  return new;
+exception when others then
+  return new;
+end;
+$$;
+
+drop trigger if exists trg_interest_notify on interest_submissions;
+create trigger trg_interest_notify
+  after insert on interest_submissions
+  for each row execute function notify_admin_of_interest();
+
+create or replace function admin_list_interest(p_token uuid)
+returns table (
+  id uuid, full_name text, email text, phone text, interested_for text,
+  message text, status text, created_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform validate_session(p_token, 'admin');
+  return query
+    select i.id, i.full_name, i.email, i.phone, i.interested_for, i.message, i.status, i.created_at
+    from interest_submissions i
+    order by i.created_at desc;
+end;
+$$;
+
+grant execute on function admin_list_interest(uuid) to anon;
+
+create or replace function admin_set_interest_status(p_token uuid, p_id uuid, p_status text)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform validate_session(p_token, 'admin');
+  if p_status not in ('new', 'contacted', 'archived') then
+    raise exception 'Invalid status.';
+  end if;
+  update interest_submissions set status = p_status where id = p_id;
+end;
+$$;
+
+grant execute on function admin_set_interest_status(uuid, uuid, text) to anon;
+
+create or replace function admin_delete_interest(p_token uuid, p_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform validate_session(p_token, 'admin');
+  delete from interest_submissions where id = p_id;
+end;
+$$;
+
+grant execute on function admin_delete_interest(uuid, uuid) to anon;
+
+create or replace function get_notify_email(p_token uuid)
+returns text
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_email text;
+begin
+  perform validate_session(p_token, 'admin');
+  select notify_email into v_email from settings where id = 1;
+  return v_email;
+end;
+$$;
+
+grant execute on function get_notify_email(uuid) to anon;
+
+create or replace function set_notify_email(p_token uuid, p_email text)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform validate_session(p_token, 'admin');
+  if p_email is not null and trim(p_email) <> '' and trim(p_email) !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then
+    raise exception 'Please enter a valid email address.';
+  end if;
+  update settings set notify_email = nullif(trim(coalesce(p_email, '')), '') where id = 1;
+end;
+$$;
+
+grant execute on function set_notify_email(uuid, text) to anon;
+
+-- ============================================================
 -- Bootstrap function — NOT granted to anon. Run manually below.
 -- ============================================================
 
@@ -1189,3 +1421,15 @@ where not exists (select 1 from tips t where t.text = v.text);
 -- initial teacher and admin access codes:
 -- ============================================================
 -- select set_initial_codes('CHANGE-ME-TEACHER', 'CHANGE-ME-ADMIN');
+
+--
+-- ============================================================
+-- Enquiry emails (optional). Create a free account at resend.com, create
+-- an API key, then run ONCE (replace the key):
+-- ============================================================
+-- select vault.create_secret('re_YOUR_RESEND_API_KEY', 'resend_api_key');
+--
+-- Without a verified domain, Resend only delivers to the email address you
+-- signed up to Resend with — so set that same address on the admin
+-- Enquiries tab. To send from your own domain once it is verified:
+-- select vault.create_secret('Hifz Class <hello@yourdomain.org>', 'resend_from');

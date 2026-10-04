@@ -3,6 +3,9 @@ import type {
   ClassOverviewRow,
   Course,
   CourseWeek,
+  InterestFor,
+  InterestStatus,
+  InterestSubmission,
   RecordField,
   RecordValues,
   Resource,
@@ -185,3 +188,36 @@ export const upsertResourceMeta = (token: string, args: UpsertResourceMetaArgs) 
 /** Returns the deleted row's storage_path so the caller can also remove the file from Storage. */
 export const deleteResourceMeta = (token: string, id: string) =>
   call<string | null>('delete_resource', { p_token: token, p_id: id })
+
+// ---------- Interest form ----------
+
+export interface SubmitInterestArgs {
+  fullName: string
+  email: string
+  phone: string
+  interestedFor: InterestFor
+  message: string
+}
+
+export const submitInterest = (args: SubmitInterestArgs) =>
+  call<void>('submit_interest', {
+    p_full_name: args.fullName,
+    p_email: args.email,
+    p_phone: args.phone,
+    p_interested_for: args.interestedFor,
+    p_message: args.message,
+  })
+
+export const getInterestAdmin = (token: string) =>
+  call<InterestSubmission[]>('admin_list_interest', { p_token: token })
+
+export const setInterestStatus = (token: string, id: string, status: InterestStatus) =>
+  call<void>('admin_set_interest_status', { p_token: token, p_id: id, p_status: status })
+
+export const deleteInterest = (token: string, id: string) =>
+  call<void>('admin_delete_interest', { p_token: token, p_id: id })
+
+export const getNotifyEmail = (token: string) => call<string | null>('get_notify_email', { p_token: token })
+
+export const setNotifyEmail = (token: string, email: string) =>
+  call<void>('set_notify_email', { p_token: token, p_email: email })

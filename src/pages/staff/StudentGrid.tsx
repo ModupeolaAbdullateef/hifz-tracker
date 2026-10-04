@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import WeeklyGrid from '../../components/WeeklyGrid'
+import StudentSummary from '../../components/StudentSummary'
 import RecordEditSheet from '../../components/RecordEditSheet'
 import { LoadingState, ErrorBanner } from '../../components/LoadingAndEmpty'
 import { getStudentGrid, saveWeeklyRecord, staffSearchStudents } from '../../lib/api'
@@ -58,7 +59,10 @@ export default function StudentGrid() {
         </button>
       </div>
 
+      <StudentSummary bundle={bundle} />
+
       <div className="card">
+        <h3>Weekly grid</h3>
         <WeeklyGrid
           fields={bundle.fields}
           weeks={bundle.weeks}

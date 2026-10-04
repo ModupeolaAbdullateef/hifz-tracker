@@ -62,6 +62,8 @@ export interface WeeklyRecord {
   values: RecordValues
   note: string | null
   next_assignment: string | null
+  /** Who wrote the note / next assignment (may be null on older rows). */
+  note_by?: string | null
   created_by: string | null
   updated_by: string | null
   created_at: string
@@ -125,4 +127,18 @@ export interface WeekRosterRow {
   has_record: boolean
   status: 'present' | 'absent' | null
   good_week: boolean
+}
+
+export type InterestFor = 'myself' | 'my_child' | 'other'
+export type InterestStatus = 'new' | 'contacted' | 'archived'
+
+export interface InterestSubmission {
+  id: string
+  full_name: string
+  email: string
+  phone: string | null
+  interested_for: InterestFor
+  message: string | null
+  status: InterestStatus
+  created_at: string
 }
