@@ -1,4 +1,4 @@
--- Swansea Mosque Hifz Tracker — database setup.
+-- Hifz Class Tracker — database setup.
 -- Safe to re-run: every statement is idempotent.
 --
 -- Security model:
@@ -18,7 +18,7 @@ create extension if not exists pgcrypto;
 
 create table if not exists course (
   id smallint primary key default 1,
-  name text not null default 'Swansea Mosque Hifz Class',
+  name text not null default 'Hifz Class',
   start_date date not null,
   weeks int not null default 10,
   class_weekday smallint not null default 4, -- 4 = Thursday (ISO-ish, 0=Sun..6=Sat here)
@@ -944,6 +944,188 @@ $$;
 grant execute on function get_course(uuid) to anon;
 
 -- ============================================================
+-- Useful Docs — admin-uploaded files, publicly downloadable.
+--
+-- Storage access can't take a token as a function argument the way RPCs
+-- do, so admin-only writes are enforced by a storage.objects RLS policy
+-- that checks a custom `x-admin-token` request header against
+-- auth_sessions (same validity check as validate_session, just surfaced
+-- at the Storage layer). Downloads are public since these are meant to be
+-- freely viewable by students/parents without a student code.
+-- ============================================================
+
+create table if not exists resources (
+  id uuid primary key default gen_random_uuid(),
+  title text not null,
+  description text,
+  storage_path text not null unique,
+  file_name text not null,
+  mime_type text,
+  size_bytes bigint,
+  sort_order int not null default 0,
+  active boolean not null default true,
+  uploaded_by text,
+  created_at timestamptz not null default now()
+);
+
+alter table resources enable row level security;
+revoke all on resources from anon, authenticated;
+
+create or replace function get_active_resources()
+returns table (id uuid, title text, description text, storage_path text, file_name text, mime_type text, size_bytes bigint)
+language sql
+security definer
+set search_path = public, pg_temp
+as $$
+  select r.id, r.title, r.description, r.storage_path, r.file_name, r.mime_type, r.size_bytes
+  from resources r
+  where r.active
+  order by r.sort_order;
+$$;
+
+grant execute on function get_active_resources() to anon;
+
+create or replace function admin_list_resources(p_token uuid)
+returns table (
+  id uuid, title text, description text, storage_path text, file_name text,
+  mime_type text, size_bytes bigint, sort_order int, active boolean
+)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform validate_session(p_token, 'admin');
+  return query
+    select r.id, r.title, r.description, r.storage_path, r.file_name, r.mime_type, r.size_bytes, r.sort_order, r.active
+    from resources r
+    order by r.sort_order;
+end;
+$$;
+
+grant execute on function admin_list_resources(uuid) to anon;
+
+create or replace function upsert_resource_meta(
+  p_token uuid, p_id uuid, p_title text, p_description text, p_storage_path text,
+  p_file_name text, p_mime_type text, p_size_bytes bigint, p_sort_order int, p_active boolean
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_session auth_sessions;
+  v_id uuid := p_id;
+begin
+  v_session := validate_session(p_token, 'admin');
+
+  if v_id is null then
+    insert into resources (title, description, storage_path, file_name, mime_type, size_bytes, sort_order, active, uploaded_by)
+    values (p_title, p_description, p_storage_path, p_file_name, p_mime_type, p_size_bytes, p_sort_order, p_active, v_session.display_name)
+    returning id into v_id;
+  else
+    update resources set
+      title = p_title,
+      description = p_description,
+      sort_order = p_sort_order,
+      active = p_active
+    where id = v_id;
+  end if;
+
+  return v_id;
+end;
+$$;
+
+grant execute on function upsert_resource_meta(uuid, uuid, text, text, text, text, text, bigint, int, boolean) to anon;
+
+create or replace function delete_resource(p_token uuid, p_id uuid)
+returns text
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_path text;
+begin
+  perform validate_session(p_token, 'admin');
+  select storage_path into v_path from resources where id = p_id;
+  delete from resources where id = p_id;
+  return v_path;
+end;
+$$;
+
+grant execute on function delete_resource(uuid, uuid) to anon;
+
+-- Checks the admin-session token passed in the 'x-admin-token' header by
+-- the browser's storage-only client (see src/lib/supabase.ts).
+create or replace function storage_is_admin()
+returns boolean
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_token text;
+begin
+  v_token := nullif(current_setting('request.headers', true)::json ->> 'x-admin-token', '');
+  if v_token is null then
+    return false;
+  end if;
+  return exists (
+    select 1 from auth_sessions s
+    where s.token = v_token::uuid and s.role = 'admin' and s.expires_at > now()
+  );
+exception when others then
+  return false;
+end;
+$$;
+
+grant execute on function storage_is_admin() to anon;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'resources',
+  'resources',
+  true,
+  20971520,
+  array[
+    'application/pdf',
+    'image/png',
+    'image/jpeg',
+    'image/webp',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain'
+  ]
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "resources_admin_insert" on storage.objects;
+create policy "resources_admin_insert" on storage.objects
+  for insert to anon
+  with check (bucket_id = 'resources' and storage_is_admin());
+
+drop policy if exists "resources_admin_update" on storage.objects;
+create policy "resources_admin_update" on storage.objects
+  for update to anon
+  using (bucket_id = 'resources' and storage_is_admin())
+  with check (bucket_id = 'resources' and storage_is_admin());
+
+drop policy if exists "resources_admin_delete" on storage.objects;
+create policy "resources_admin_delete" on storage.objects
+  for delete to anon
+  using (bucket_id = 'resources' and storage_is_admin());
+
+drop policy if exists "resources_public_select" on storage.objects;
+create policy "resources_public_select" on storage.objects
+  for select to anon
+  using (bucket_id = 'resources');
+
+-- ============================================================
 -- Bootstrap function — NOT granted to anon. Run manually below.
 -- ============================================================
 
@@ -967,7 +1149,7 @@ $$;
 -- ============================================================
 
 insert into course (id, name, start_date, weeks, class_weekday, target_pages)
-values (1, 'Swansea Mosque Hifz Class', date '2026-10-15', 10, 4, null)
+values (1, 'Hifz Class', date '2026-10-15', 10, 4, null)
 on conflict (id) do nothing;
 
 insert into settings (id) values (1) on conflict (id) do nothing;

@@ -1,8 +1,8 @@
-# Hifz Progress Tracker — Mosg Abertawe
+# Hifz Progress Tracker
 
-A mobile-first web app that replaces the weekly Excel sheet for Swansea Mosque's
-10-week Hifz class. Teachers log a student's weekly progress; students and
-parents look up progress with a student code; an admin manages the class.
+A mobile-first web app that replaces the weekly Excel sheet for a 10-week
+Hifz class. Teachers log a student's weekly progress; students and parents
+look up progress with a student code; an admin manages the class.
 
 Built with Vite + React + TypeScript, Supabase (Postgres + RPC functions), and
 hosted on GitHub Pages via GitHub Actions.
@@ -36,6 +36,8 @@ hosted on GitHub Pages via GitHub Actions.
    teacher note and next assignment, and any badges earned.
 3. After week 10 (or once the target is reached), a **certificate** becomes
    available to view and print.
+4. The **Useful Docs** tab (next to "My Record") lists induction material and
+   other documents the admin has uploaded — tap **Open** to view/download.
 
 ## For the admin (lead teacher)
 
@@ -58,17 +60,22 @@ code** instead of the teacher code.
   field blank to keep it unchanged. Existing logged-in sessions stay valid
   until they expire (up to 12 hours) — this is intentional so no one gets
   logged out mid-class.
+- **Docs**: upload documents (PDF, Word, image, or text, up to 20 MB) with a
+  title and optional description. They appear immediately on the public
+  Useful Docs tab. Deactivate to hide one without deleting it, or delete it
+  outright (this also removes the underlying file from storage).
 - **Export**: download a CSV with one row per student per week and one
   column per field, for backup or reporting.
 
-### Changing the brand colours
+### Changing the brand colours or fonts
 
 All colours live in `src/styles/theme.css` as CSS custom properties
-(`--brand-primary`, `--brand-secondary`, `--status-absent`, `--status-good`,
-etc.). Edit the values there, commit, and push — the next deploy picks them
-up automatically. The current values are placeholders; swap them for Swansea
-Mosque's actual brand colours (and swap the Google Fonts import in
-`index.html` if the font should change too).
+(`--brand-primary`, `--brand-secondary`, `--accent-coral`, `--status-absent`,
+`--status-good`, etc.) — edit the values there, commit, and push, and the
+next deploy picks them up automatically everywhere (buttons, header, badges,
+nav all reference the same tokens). Headings use `--font-display` (Playfair
+Display) and body text uses `--font-ui` (Inter); swap the Google Fonts
+import in `index.html` if either should change.
 
 ## Database / security model
 
@@ -84,6 +91,12 @@ Mosque's actual brand colours (and swap the Google Fonts import in
   the browser only ever has the anon key.
 - Login codes are stored hashed (`pgcrypto`), never in plain text.
 - Failed login/code attempts are rate-limited (10 failures / 15 minutes).
+- The Useful Docs storage bucket is public for *downloads* (the files are
+  meant to be freely viewable), but *uploads/deletes* are gated by a
+  storage RLS policy that checks an `x-admin-token` header against the same
+  `auth_sessions` table every RPC checks — verified in testing: an upload
+  without a valid admin token is rejected with "row-level security policy"
+  denied, even with a forged token.
 
 To change the initial codes or re-apply schema changes, edit and re-run
 `supabase/setup.sql` in the Supabase SQL Editor — every statement is

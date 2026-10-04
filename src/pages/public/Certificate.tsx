@@ -69,7 +69,7 @@ export default function Certificate() {
         </p>
         <p className="muted">Awarded on {today}</p>
         <p className="muted" style={{ marginTop: '2rem' }}>
-          Mosg Abertawe &middot; Swansea Mosque
+          Hifz Class
         </p>
       </div>
     </main>

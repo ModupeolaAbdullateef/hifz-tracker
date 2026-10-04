@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import SiteHeader from '../../components/SiteHeader'
 import TipsMarquee from '../../components/TipsMarquee'
+import PublicNav from '../../components/PublicNav'
 import WeeklyGrid from '../../components/WeeklyGrid'
 import ProgressRing from '../../components/ProgressRing'
 import StatCard from '../../components/StatCard'
@@ -131,6 +132,7 @@ export default function StudentProgress() {
       <SiteHeader />
       <TipsMarquee tips={tips} />
       <main className="page">
+        <PublicNav />
         <div className="flex-between">
           <h2 className="mt-0">
             {student.first_name} {student.last_name}'s Progress / Fy Nghynnydd
@@ -208,7 +210,7 @@ export default function StudentProgress() {
           </div>
         )}
       </main>
-      <footer className="site-footer">Mosg Abertawe &middot; Swansea Mosque Hifz Class</footer>
+      <footer className="site-footer">Hifz Class</footer>
     </div>
   )
 }

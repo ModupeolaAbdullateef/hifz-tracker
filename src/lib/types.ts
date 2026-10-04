@@ -1,5 +1,17 @@
 export type FieldType = 'number' | 'yesno'
 
+export interface Resource {
+  id: string
+  title: string
+  description: string | null
+  storage_path: string
+  file_name: string
+  mime_type: string | null
+  size_bytes: number | null
+  sort_order: number
+  active: boolean
+}
+
 export interface RecordField {
   key: string
   label: string

@@ -5,6 +5,7 @@ import type {
   CourseWeek,
   RecordField,
   RecordValues,
+  Resource,
   StudentFull,
   StudentPublic,
   StudentRecordBundle,
@@ -26,6 +27,8 @@ export const getStudentRecord = (studentId: string, code: string) =>
   call<StudentRecordBundle>('get_student_record', { p_student_id: studentId, p_code: code })
 
 export const getActiveTips = () => call<Tip[]>('get_active_tips')
+
+export const getActiveResources = () => call<Resource[]>('get_active_resources')
 
 // ---------- Staff auth ----------
 
@@ -150,3 +153,35 @@ export const getRecordFieldsAdmin = (token: string) => call<RecordField[]>('get_
 export const getCourseWeeksAdmin = (token: string) => call<CourseWeek[]>('get_course_weeks', { p_token: token })
 
 export const getCourseAdmin = (token: string) => call<Course>('get_course', { p_token: token })
+
+export const getResourcesAdmin = (token: string) => call<Resource[]>('admin_list_resources', { p_token: token })
+
+export interface UpsertResourceMetaArgs {
+  id?: string
+  title: string
+  description: string | null
+  storagePath: string
+  fileName: string
+  mimeType: string | null
+  sizeBytes: number
+  sortOrder: number
+  active: boolean
+}
+
+export const upsertResourceMeta = (token: string, args: UpsertResourceMetaArgs) =>
+  call<string>('upsert_resource_meta', {
+    p_token: token,
+    p_id: args.id ?? null,
+    p_title: args.title,
+    p_description: args.description,
+    p_storage_path: args.storagePath,
+    p_file_name: args.fileName,
+    p_mime_type: args.mimeType,
+    p_size_bytes: args.sizeBytes,
+    p_sort_order: args.sortOrder,
+    p_active: args.active,
+  })
+
+/** Returns the deleted row's storage_path so the caller can also remove the file from Storage. */
+export const deleteResourceMeta = (token: string, id: string) =>
+  call<string | null>('delete_resource', { p_token: token, p_id: id })

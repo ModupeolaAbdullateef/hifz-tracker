@@ -7,7 +7,7 @@ export default function SiteHeader() {
         <Link to="/" style={{ color: 'inherit', textDecoration: 'none' }}>
           <h1 className="site-header__title">
             Hifz Progress
-            <small className="arabic">تقدم الحفظ &middot; Mosg Abertawe</small>
+            <small className="arabic">تقدم الحفظ</small>
           </h1>
         </Link>
       </div>

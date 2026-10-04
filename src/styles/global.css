@@ -28,6 +28,13 @@ h4 {
   margin: 0 0 var(--space-3) 0;
 }
 
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
 p {
   margin: 0 0 var(--space-3) 0;
 }
@@ -64,7 +71,7 @@ textarea {
 }
 
 .site-header {
-  background: var(--brand-primary);
+  background: var(--header-gradient);
   color: var(--text-on-brand);
   position: relative;
   overflow: hidden;
@@ -74,15 +81,8 @@ textarea {
   content: '';
   position: absolute;
   inset: 0;
-  opacity: 0.14;
-  background-image: radial-gradient(
-      circle at 10px 10px,
-      transparent 0 6px,
-      var(--brand-secondary) 6px 7px,
-      transparent 7px
-    ),
-    radial-gradient(circle at 50px 50px, transparent 0 6px, var(--brand-secondary) 6px 7px, transparent 7px);
-  background-size: 60px 60px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.16' stroke-width='1'%3E%3Crect x='16' y='16' width='24' height='24'/%3E%3Crect x='16' y='16' width='24' height='24' transform='rotate(45 28 28)'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 56px 56px;
   pointer-events: none;
 }
 
@@ -98,15 +98,19 @@ textarea {
 }
 
 .site-header__title {
-  font-size: 1.15rem;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
   margin: 0;
 }
 
 .site-header__title small {
   display: block;
+  font-family: var(--font-arabic);
   font-weight: 400;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   opacity: 0.85;
+  margin-top: 2px;
 }
 
 .page {
@@ -180,7 +184,7 @@ textarea {
   padding: 0.65rem 1.1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.05s ease, filter 0.15s ease;
+  transition: transform 0.1s ease, filter 0.15s ease, box-shadow 0.15s ease;
   min-height: 44px;
 }
 
@@ -194,12 +198,15 @@ textarea {
 }
 
 .btn-primary {
-  background: var(--brand-primary);
+  background: var(--header-gradient);
   color: var(--text-on-brand);
+  box-shadow: 0 2px 8px rgba(76, 40, 137, 0.28);
 }
 
 .btn-primary:hover:not(:disabled) {
-  filter: brightness(1.08);
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(76, 40, 137, 0.34);
 }
 
 .btn-secondary {
@@ -385,6 +392,42 @@ textarea {
   background: var(--brand-primary-light);
 }
 
+.nav-tabs--public {
+  justify-content: center;
+}
+
+/* ---------- Useful Docs ---------- */
+
+.doc-list {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+}
+
+.doc-list__item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.doc-list__item:first-child {
+  border-top: none;
+}
+
+.doc-list__title {
+  font-weight: 700;
+  color: var(--brand-ink);
+}
+
+.doc-list__meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
 /* ---------- Tips marquee ---------- */
 
 .tips-marquee {
@@ -392,13 +435,13 @@ textarea {
   border-bottom: 1px solid var(--border-subtle);
   overflow: hidden;
   position: relative;
-  padding: var(--space-2) 0;
+  padding: var(--space-3) 0;
 }
 
 .tips-marquee__track {
   display: flex;
   width: max-content;
-  animation: tips-scroll 28s linear infinite;
+  animation: tips-scroll 110s linear infinite;
 }
 
 .tips-marquee:hover .tips-marquee__track,
@@ -409,25 +452,27 @@ textarea {
 .tips-marquee__item {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: 0 var(--space-6);
+  gap: var(--space-3);
+  padding: 0 var(--space-7);
   white-space: nowrap;
-  font-size: 0.9rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--brand-ink);
 }
 
 .tips-marquee__tag {
   font-weight: 700;
   text-transform: uppercase;
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   letter-spacing: 0.04em;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border-radius: 999px;
   background: var(--brand-primary);
   color: var(--text-on-brand);
 }
 
 .tips-marquee__tag--announcement {
-  background: var(--brand-secondary);
+  background: var(--accent-coral);
   color: var(--brand-ink);
 }
 
@@ -748,8 +793,9 @@ textarea {
 }
 
 .certificate .student-name {
-  font-size: 1.6rem;
-  color: var(--brand-secondary);
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  color: var(--accent-coral-deep);
   font-weight: 800;
   margin: var(--space-4) 0;
 }

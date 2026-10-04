@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import TipsMarquee from '../../components/TipsMarquee'
 import SiteHeader from '../../components/SiteHeader'
+import PublicNav from '../../components/PublicNav'
 import { ErrorBanner } from '../../components/LoadingAndEmpty'
 import { getActiveTips, getStudentRecord, searchStudentsPublic } from '../../lib/api'
 import { saveStudentSession } from '../../lib/session'
@@ -60,6 +61,7 @@ export default function Home() {
       <SiteHeader />
       <TipsMarquee tips={tips} />
       <main className="page page--narrow">
+        <PublicNav />
         <div className="card">
           <h2>Find my record / Dod o hyd i fy nghofnod</h2>
           {!selected && (
@@ -134,7 +136,7 @@ export default function Home() {
           Teacher or admin? <a href="#/staff/login">Staff login</a>
         </p>
       </main>
-      <footer className="site-footer">Mosg Abertawe &middot; Swansea Mosque Hifz Class</footer>
+      <footer className="site-footer">Hifz Class</footer>
     </div>
   )
 }

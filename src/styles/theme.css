@@ -1,34 +1,37 @@
-/* PLACEHOLDER: replace with Swansea Mosque brand colours (logo / screenshot) */
 :root {
-  /* Brand */
-  --brand-primary: #0f5132;
-  --brand-primary-dark: #0a3a24;
-  --brand-primary-light: #e7f1ec;
-  --brand-secondary: #c9a227;
-  --brand-secondary-light: #f7eecb;
-  --brand-ink: #1b1b1b;
-  --brand-surface: #fbf8f1;
-  --brand-surface-alt: #f1ece0;
+  /* Brand — deep purple + teal + coral, from the supplied style reference */
+  --brand-primary: #5b3a9e;
+  --brand-primary-dark: #3d2170;
+  --brand-primary-light: #f1ecfb;
+  --brand-secondary: #14b8a6;
+  --brand-secondary-light: #e3fbf7;
+  --accent-coral: #ff6f61;
+  --accent-coral-light: #ffeae7;
+  --accent-coral-deep: #d14d3e;
+  --brand-ink: #241642;
+  --brand-surface: #faf9fd;
+  --brand-surface-alt: #f1ecfb;
   --brand-white: #ffffff;
+  --header-gradient: linear-gradient(135deg, #6d47b9 0%, #3d2170 100%);
 
-  /* Status */
-  --status-absent: #d93a3a;
-  --status-absent-bg: #fbe6e6;
-  --status-good: #7cc24e;
-  --status-good-bg: #eef7e5;
-  --status-future-bg: #f3f1ec;
-  --status-cancelled-bg: #e4e4e4;
+  /* Status — kept recognisable as red = absent, green = good */
+  --status-absent: #e5484d;
+  --status-absent-bg: #fdecec;
+  --status-good: #30a46c;
+  --status-good-bg: #e6f6ee;
+  --status-future-bg: #f3f1fa;
+  --status-cancelled-bg: #e9e4f0;
 
   /* Text */
   --text-primary: var(--brand-ink);
-  --text-muted: #5d5a53;
+  --text-muted: #6b6380;
   --text-on-brand: #ffffff;
 
   /* Borders / shadows */
-  --border-subtle: #e4ddc9;
-  --border-strong: #c9bfa3;
-  --shadow-card: 0 2px 10px rgba(27, 27, 27, 0.08);
-  --shadow-pop: 0 8px 24px rgba(27, 27, 27, 0.16);
+  --border-subtle: #e6e0f2;
+  --border-strong: #c9bede;
+  --shadow-card: 0 2px 12px rgba(76, 40, 137, 0.1);
+  --shadow-pop: 0 10px 30px rgba(76, 40, 137, 0.22);
 
   /* Radii / spacing */
   --radius-sm: 6px;
@@ -44,14 +47,15 @@
 
   /* Fonts */
   --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --font-arabic: 'Amiri', serif;
 
   /* Focus ring */
-  --focus-ring: 0 0 0 3px rgba(201, 162, 39, 0.55);
+  --focus-ring: 0 0 0 3px rgba(255, 111, 97, 0.55);
 }
 
 @media (prefers-contrast: more) {
   :root {
-    --border-subtle: #999;
+    --border-subtle: #8c7fae;
   }
 }

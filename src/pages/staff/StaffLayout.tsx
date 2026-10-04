@@ -40,6 +40,7 @@ export default function StaffLayout() {
               <NavLink to="/staff/admin/course">Course</NavLink>
               <NavLink to="/staff/admin/fields">Fields</NavLink>
               <NavLink to="/staff/admin/tips">Tips</NavLink>
+              <NavLink to="/staff/admin/docs">Docs</NavLink>
               <NavLink to="/staff/admin/codes">Codes</NavLink>
               <NavLink to="/staff/admin/export">Export</NavLink>
             </>
