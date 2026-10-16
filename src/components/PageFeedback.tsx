@@ -2,7 +2,7 @@
 // file and src/styles/page-feedback.css, drop <PageFeedback /> from App.tsx,
 // and run the drop statements at the top of supabase/page-feedback.sql.
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { useLocation } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { formatUKDate } from '../lib/dates'
@@ -58,7 +58,8 @@ export default function PageFeedback() {
     void load()
   }, [load])
 
-  if (!session) return null
+  // The login page has its own way in, so don't send people from there to itself.
+  if (!session && pathname === '/staff/login') return null
 
   async function add(e: FormEvent) {
     e.preventDefault()
@@ -97,7 +98,14 @@ export default function PageFeedback() {
             </button>
           </div>
 
-          {items.length === 0 ? (
+          {!session ? (
+            <p className="pf__empty">
+              <Link to="/staff/login" state={{ from: pathname }}>
+                Log in as staff
+              </Link>{' '}
+              to see or add feedback on this page.
+            </p>
+          ) : items.length === 0 ? (
             <p className="pf__empty">No feedback on this page yet.</p>
           ) : (
             <ul className="pf__list">

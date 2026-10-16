@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import SiteHeader from '../../components/SiteHeader'
 import PublicNav from '../../components/PublicNav'
 import { ErrorBanner } from '../../components/LoadingAndEmpty'
@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext'
 export default function Login() {
   const { login } = useAuth()
   const navigate = useNavigate()
+  const returnTo = (useLocation().state as { from?: string } | null)?.from ?? '/staff'
   const [displayName, setDisplayName] = useState('')
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -19,7 +20,7 @@ export default function Login() {
     setError(null)
     try {
       await login(displayName.trim(), code.trim())
-      navigate('/staff')
+      navigate(returnTo)
     } catch {
       setError('Incorrect name or access code.')
     } finally {
