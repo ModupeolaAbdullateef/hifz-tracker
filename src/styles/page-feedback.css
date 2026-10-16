@@ -1,0 +1,128 @@
+/* TEMPORARY: styles for src/components/PageFeedback.tsx */
+
+.pf {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  z-index: 1000;
+  font-size: 0.9rem;
+}
+
+.pf__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  border: none;
+  border-radius: 999px;
+  padding: 0.6rem 1rem;
+  background: var(--accent-coral);
+  color: var(--brand-white);
+  font-weight: 600;
+  box-shadow: var(--shadow-pop);
+  cursor: pointer;
+}
+
+.pf__count {
+  background: var(--brand-white);
+  color: var(--accent-coral-deep);
+  border-radius: 999px;
+  padding: 0 0.45rem;
+  font-size: 0.8rem;
+}
+
+.pf__box {
+  width: min(340px, calc(100vw - 2 * var(--space-4)));
+  max-height: min(480px, calc(100vh - 2 * var(--space-4)));
+  overflow-y: auto;
+  background: var(--brand-white);
+  border: 2px solid var(--accent-coral);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-pop);
+  padding: var(--space-3);
+}
+
+.pf__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.pf__page {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.pf__close {
+  border: none;
+  background: transparent;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.pf__empty {
+  color: var(--text-muted);
+  margin: var(--space-2) 0;
+}
+
+.pf__list {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+}
+
+.pf__item {
+  background: var(--accent-coral-light);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.pf__msg {
+  margin: 0 0 var(--space-1);
+  white-space: pre-wrap;
+}
+
+.pf__meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.pf__delete {
+  border: none;
+  background: transparent;
+  color: var(--accent-coral-deep);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.pf__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pf__form textarea {
+  width: 100%;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  resize: vertical;
+}
+
+@media print {
+  .pf {
+    display: none;
+  }
+}

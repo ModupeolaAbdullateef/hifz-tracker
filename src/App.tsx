@@ -18,33 +18,38 @@ import Codes from './pages/admin/Codes'
 import ExportCsv from './pages/admin/ExportCsv'
 import Docs from './pages/admin/Docs'
 import Enquiries from './pages/admin/Enquiries'
+import PageFeedback from './components/PageFeedback'
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/record" element={<FindRecord />} />
-      <Route path="/record/:studentId" element={<StudentProgress />} />
-      <Route path="/certificate/:studentId" element={<Certificate />} />
-      <Route path="/docs" element={<UsefulDocs />} />
+    <>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/record" element={<FindRecord />} />
+        <Route path="/record/:studentId" element={<StudentProgress />} />
+        <Route path="/certificate/:studentId" element={<Certificate />} />
+        <Route path="/docs" element={<UsefulDocs />} />
 
-      <Route path="/staff/login" element={<Login />} />
-      <Route path="/staff" element={<StaffLayout />}>
-        <Route index element={<FindStudent />} />
-        <Route path="student/:studentId" element={<StudentGrid />} />
-        <Route path="week" element={<ClassWeekView />} />
-        <Route path="overview" element={<ClassOverview />} />
-        <Route path="admin/students" element={<ManageStudents />} />
-        <Route path="admin/course" element={<CourseSettings />} />
-        <Route path="admin/fields" element={<RecordFields />} />
-        <Route path="admin/tips" element={<Tips />} />
-        <Route path="admin/codes" element={<Codes />} />
-        <Route path="admin/export" element={<ExportCsv />} />
-        <Route path="admin/docs" element={<Docs />} />
-        <Route path="admin/enquiries" element={<Enquiries />} />
-      </Route>
+        <Route path="/staff/login" element={<Login />} />
+        <Route path="/staff" element={<StaffLayout />}>
+          <Route index element={<FindStudent />} />
+          <Route path="student/:studentId" element={<StudentGrid />} />
+          <Route path="week" element={<ClassWeekView />} />
+          <Route path="overview" element={<ClassOverview />} />
+          <Route path="admin/students" element={<ManageStudents />} />
+          <Route path="admin/course" element={<CourseSettings />} />
+          <Route path="admin/fields" element={<RecordFields />} />
+          <Route path="admin/tips" element={<Tips />} />
+          <Route path="admin/codes" element={<Codes />} />
+          <Route path="admin/export" element={<ExportCsv />} />
+          <Route path="admin/docs" element={<Docs />} />
+          <Route path="admin/enquiries" element={<Enquiries />} />
+        </Route>
 
-      <Route path="*" element={<Home />} />
-    </Routes>
+        <Route path="*" element={<Home />} />
+      </Routes>
+      {/* TEMPORARY: per-page review feedback — remove once reviews are done */}
+      <PageFeedback />
+    </>
   )
 }
