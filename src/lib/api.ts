@@ -55,6 +55,8 @@ export interface SaveWeeklyRecordArgs {
   values: RecordValues
   note: string | null
   nextAssignment: string | null
+  fromPage: number | null
+  toPage: number | null
 }
 
 export const saveWeeklyRecord = (token: string, args: SaveWeeklyRecordArgs) =>
@@ -67,7 +69,12 @@ export const saveWeeklyRecord = (token: string, args: SaveWeeklyRecordArgs) =>
     p_values: args.values,
     p_note: args.note,
     p_next_assignment: args.nextAssignment,
+    p_from_page: args.fromPage,
+    p_to_page: args.toPage,
   })
+
+export const setPriorPages = (token: string, studentId: string, pages: number[]) =>
+  call<void>('set_prior_pages', { p_token: token, p_student_id: studentId, p_pages: pages })
 
 export const getWeekRoster = (token: string, courseId: number, weekNumber: number) =>
   call<WeekRosterRow[]>('get_week_roster', { p_token: token, p_course_id: courseId, p_week_number: weekNumber })

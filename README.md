@@ -23,10 +23,17 @@ hosted on GitHub Pages via GitHub Actions.
 5. In the entry panel: toggle **Present/Absent** (absent hides the other
    fields and marks the week red), fill in New Hifz / Old Hifz / Revision /
    Tajweed, toggle **Good week** if it was a strong week (marks it green),
-   and add a note or next assignment if useful.
-6. **Class overview** shows totals, attendance %, and an on-track/behind
+   and add a note or next assignment if useful. Optionally enter the
+   **New hifz pages** (mushaf page numbers, e.g. 402 to 404). If New Hifz is
+   still empty, it's filled in with the page count.
+6. **Quran memorisation**: each student's page shows a juz-by-juz map of
+   everything they've memorised (standard 604-page Madani mushaf). When a
+   student joins, tap **Edit hifz before joining** and mark what they
+   already know (a page range, whole juz, surahs or single pages). After
+   that, the map updates on its own from the weekly page ranges.
+7. **Class overview** shows totals, attendance %, and an on-track/behind
    indicator for every student.
-7. Sessions last 12 hours, then you'll need to log in again.
+8. Sessions last 12 hours, then you'll need to log in again.
 
 ## For students and parents
 
@@ -36,7 +43,9 @@ hosted on GitHub Pages via GitHub Actions.
 2. The progress page shows the weekly grid, totals, a progress ring against
    the target (if one is set), a chart of New Hifz per week, all the
    teacher notes and next assignments (newest first, each signed with the
-   name of the teacher who wrote it), and any badges earned.
+   name of the teacher who wrote it), any badges earned, and a **Quran
+   memorisation** map showing how much of each juz they've memorised
+   (switch to **Whole** to see every page).
 3. After week 10 (or once the target is reached), a **certificate** becomes
    available to view and print.
 4. The **Useful Docs** tab (next to "My Record") lists induction material and

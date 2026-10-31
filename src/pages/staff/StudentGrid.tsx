@@ -3,8 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom'
 import WeeklyGrid from '../../components/WeeklyGrid'
 import StudentSummary from '../../components/StudentSummary'
 import RecordEditSheet from '../../components/RecordEditSheet'
+import QuranProgress from '../../components/QuranProgress'
+import PriorHifzEditor from '../../components/PriorHifzEditor'
 import { LoadingState, ErrorBanner } from '../../components/LoadingAndEmpty'
-import { getStudentGrid, saveWeeklyRecord, staffSearchStudents } from '../../lib/api'
+import { getStudentGrid, saveWeeklyRecord, setPriorPages, staffSearchStudents } from '../../lib/api'
+import { memorisedPages } from '../../lib/quran'
 import { useAuth } from '../../context/AuthContext'
 import { getCurrentWeekNumber, weekByNumber } from '../../lib/dates'
 import type { StudentRecordBundle } from '../../lib/types'
@@ -16,6 +19,7 @@ export default function StudentGrid() {
   const [bundle, setBundle] = useState<StudentRecordBundle | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [editingWeek, setEditingWeek] = useState<number | null>(null)
+  const [editingPrior, setEditingPrior] = useState(false)
 
   const load = useCallback(async () => {
     if (!session || !studentId) return
@@ -63,6 +67,15 @@ export default function StudentGrid() {
 
       <StudentSummary bundle={bundle} />
 
+      <QuranProgress
+        memorised={memorisedPages(bundle)}
+        actions={
+          <button className="btn btn-secondary btn-sm" onClick={() => setEditingPrior(true)}>
+            Edit hifz before joining
+          </button>
+        }
+      />
+
       <div className="card">
         <h3>Weekly grid</h3>
         <WeeklyGrid
@@ -74,6 +87,19 @@ export default function StudentGrid() {
           onWeekClick={(wn) => setEditingWeek(wn)}
         />
       </div>
+
+      {editingPrior && (
+        <PriorHifzEditor
+          studentLabel={`${student.first_name} ${student.last_name}`}
+          initialPages={student.prior_pages ?? []}
+          onClose={() => setEditingPrior(false)}
+          onSave={async (pages) => {
+            if (!session || !studentId) return
+            await setPriorPages(session.token, studentId, pages)
+            await load()
+          }}
+        />
+      )}
 
       {editingWeek !== null && (
         <RecordEditSheet
@@ -93,6 +119,8 @@ export default function StudentGrid() {
               values: data.values,
               note: data.note,
               nextAssignment: data.nextAssignment,
+              fromPage: data.fromPage,
+              toPage: data.toPage,
             })
             await load()
           }}
@@ -106,6 +134,8 @@ export default function StudentGrid() {
               values: data.values,
               note: data.note,
               nextAssignment: data.nextAssignment,
+              fromPage: data.fromPage,
+              toPage: data.toPage,
             })
             setEditingWeek(null)
             await goToNextStudent()

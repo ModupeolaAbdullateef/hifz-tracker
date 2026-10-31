@@ -16,6 +16,8 @@ export interface RecordEditSheetProps {
     values: RecordValues
     note: string | null
     nextAssignment: string | null
+    fromPage: number | null
+    toPage: number | null
   }) => Promise<void>
   onSaveAndNext?: (data: {
     status: 'present' | 'absent'
@@ -23,6 +25,8 @@ export interface RecordEditSheetProps {
     values: RecordValues
     note: string | null
     nextAssignment: string | null
+    fromPage: number | null
+    toPage: number | null
   }) => Promise<void>
 }
 
@@ -41,6 +45,8 @@ export default function RecordEditSheet({
   const [values, setValues] = useState<RecordValues>(existingRecord?.values ?? {})
   const [note, setNote] = useState(existingRecord?.note ?? '')
   const [nextAssignment, setNextAssignment] = useState(existingRecord?.next_assignment ?? '')
+  const [fromPage, setFromPage] = useState(existingRecord?.hifz_from_page?.toString() ?? '')
+  const [toPage, setToPage] = useState(existingRecord?.hifz_to_page?.toString() ?? '')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<'save' | 'next' | null>(null)
 
@@ -48,13 +54,26 @@ export default function RecordEditSheet({
     setValues((v) => ({ ...v, [key]: value }))
   }
 
+  const hasNewHifzField = fields.some((f) => f.key === 'new_hifz' && f.type === 'number')
+
+  /** When both pages are entered and New Hifz is still empty, fill in the page count. */
+  function fillNewHifzFromRange(fromText: string, toText: string) {
+    const from = Number(fromText)
+    const to = Number(toText)
+    if (!hasNewHifzField || !fromText || !toText || !(to >= from)) return
+    setValues((v) => (typeof v.new_hifz === 'number' ? v : { ...v, new_hifz: to - from + 1 }))
+  }
+
   function buildPayload() {
+    const present = status === 'present'
     return {
       status,
       goodWeek,
-      values: status === 'absent' ? {} : values,
+      values: present ? values : {},
       note: note.trim() ? note.trim() : null,
       nextAssignment: nextAssignment.trim() ? nextAssignment.trim() : null,
+      fromPage: present && fromPage ? Number(fromPage) : null,
+      toPage: present && toPage ? Number(toPage) : null,
     }
   }
 
@@ -166,6 +185,40 @@ export default function RecordEditSheet({
                 )}
               </div>
             ))}
+
+            <div className="field">
+              <label htmlFor="from-page">New hifz pages (mushaf page numbers)</label>
+              <div className="page-range-inputs">
+                <input
+                  id="from-page"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={604}
+                  placeholder="From"
+                  aria-label="From page"
+                  value={fromPage}
+                  onChange={(e) => setFromPage(e.target.value)}
+                  onBlur={() => fillNewHifzFromRange(fromPage, toPage)}
+                />
+                <span aria-hidden="true">to</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={604}
+                  placeholder="To"
+                  aria-label="To page"
+                  value={toPage}
+                  onChange={(e) => setToPage(e.target.value)}
+                  onBlur={() => fillNewHifzFromRange(fromPage, toPage)}
+                />
+              </div>
+              <p className="field-hint">
+                Optional. Fills in their Quran memorisation map (604-page Madani mushaf). For a single page, enter
+                it in either box.
+              </p>
+            </div>
 
             <div className="field">
               <label className="switch">

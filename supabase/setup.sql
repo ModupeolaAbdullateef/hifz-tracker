@@ -102,6 +102,11 @@ $$;
 
 create index if not exists idx_students_course on students (course_id);
 
+-- Quran memorisation map: mushaf pages (standard 604-page Madani mushaf)
+-- a student already knew when they joined. Pages from weekly records'
+-- hifz_from_page/hifz_to_page are added on top of these in the app.
+alter table students add column if not exists prior_pages smallint[] not null default '{}';
+
 create table if not exists weekly_records (
   id uuid primary key default gen_random_uuid(),
   student_id uuid not null references students (id) on delete cascade,
@@ -124,6 +129,10 @@ create index if not exists idx_weekly_records_week on weekly_records (week_numbe
 -- Who wrote the note / next assignment. Kept separate from updated_by so a
 -- later edit to page counts doesn't re-attribute someone else's note.
 alter table weekly_records add column if not exists note_by text;
+
+-- Mushaf page range covered by that week's new hifz (both null if not given).
+alter table weekly_records add column if not exists hifz_from_page smallint;
+alter table weekly_records add column if not exists hifz_to_page smallint;
 update weekly_records set note_by = coalesce(updated_by, created_by)
   where note_by is null and (note is not null or next_assignment is not null);
 
@@ -493,6 +502,7 @@ $$;
 
 grant execute on function get_student_grid(uuid, uuid) to anon;
 
+drop function if exists save_weekly_record(uuid, uuid, int, text, boolean, jsonb, text, text);
 create or replace function save_weekly_record(
   p_token uuid,
   p_student_id uuid,
@@ -501,7 +511,9 @@ create or replace function save_weekly_record(
   p_good_week boolean,
   p_values jsonb,
   p_note text,
-  p_next_assignment text
+  p_next_assignment text,
+  p_from_page int default null,
+  p_to_page int default null
 )
 returns void
 language plpgsql
@@ -519,11 +531,30 @@ declare
   v_present_count int;
   v_target numeric;
   v_values jsonb := coalesce(p_values, '{}'::jsonb);
+  v_from int := p_from_page;
+  v_to int := p_to_page;
 begin
   v_session := validate_session(p_token, 'teacher');
 
   if p_status not in ('present', 'absent') then
     raise exception 'Invalid status.';
+  end if;
+
+  -- A single page may be given as just "from" or just "to".
+  if p_status = 'absent' then
+    v_from := null;
+    v_to := null;
+  else
+    v_from := coalesce(v_from, v_to);
+    v_to := coalesce(v_to, v_from);
+    if v_from is not null then
+      if v_from < 1 or v_to > 604 then
+        raise exception 'Pages must be between 1 and 604.';
+      end if;
+      if v_from > v_to then
+        raise exception 'The "from" page must not be after the "to" page.';
+      end if;
+    end if;
   end if;
 
   if p_status = 'absent' then
@@ -548,12 +579,12 @@ begin
 
   insert into weekly_records (
     student_id, week_number, status, good_week, values, note, next_assignment, note_by,
-    created_by, updated_by, created_at, updated_at
+    hifz_from_page, hifz_to_page, created_by, updated_by, created_at, updated_at
   )
   values (
     p_student_id, p_week_number, p_status, p_good_week, v_values, p_note, p_next_assignment,
     case when p_note is not null or p_next_assignment is not null then v_session.display_name end,
-    v_session.display_name, v_session.display_name, v_now, v_now
+    v_from, v_to, v_session.display_name, v_session.display_name, v_now, v_now
   )
   on conflict (student_id, week_number) do update set
     status = excluded.status,
@@ -561,6 +592,8 @@ begin
     values = excluded.values,
     note = excluded.note,
     next_assignment = excluded.next_assignment,
+    hifz_from_page = excluded.hifz_from_page,
+    hifz_to_page = excluded.hifz_to_page,
     note_by = case
       when excluded.note is null and excluded.next_assignment is null then null
       when weekly_records.note is distinct from excluded.note
@@ -617,7 +650,36 @@ begin
 end;
 $$;
 
-grant execute on function save_weekly_record(uuid, uuid, int, text, boolean, jsonb, text, text) to anon;
+grant execute on function save_weekly_record(uuid, uuid, int, text, boolean, jsonb, text, text, int, int) to anon;
+
+-- Sets the mushaf pages a student already knew when they joined.
+create or replace function set_prior_pages(p_token uuid, p_student_id uuid, p_pages int[])
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform validate_session(p_token, 'teacher');
+
+  if exists (select 1 from unnest(coalesce(p_pages, '{}')) p where p is null or p < 1 or p > 604) then
+    raise exception 'Pages must be between 1 and 604.';
+  end if;
+
+  update students
+  set prior_pages = coalesce(
+    (select array_agg(distinct p::smallint order by p::smallint) from unnest(p_pages) p),
+    '{}'
+  )
+  where id = p_student_id;
+
+  if not found then
+    raise exception 'Student not found.';
+  end if;
+end;
+$$;
+
+grant execute on function set_prior_pages(uuid, uuid, int[]) to anon;
 
 drop function if exists get_week_roster(uuid, int);
 create or replace function get_week_roster(p_token uuid, p_course_id int, p_week_number int)

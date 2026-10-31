@@ -5,10 +5,12 @@ import TipsMarquee from '../../components/TipsMarquee'
 import PublicNav from '../../components/PublicNav'
 import WeeklyGrid from '../../components/WeeklyGrid'
 import StudentSummary from '../../components/StudentSummary'
+import QuranProgress from '../../components/QuranProgress'
 import { ErrorBanner, LoadingState } from '../../components/LoadingAndEmpty'
 import { getActiveTips, getStudentRecord } from '../../lib/api'
 import { clearStudentSession, loadStudentSession, saveStudentSession } from '../../lib/session'
 import { formatUKDate, getCurrentWeekNumber } from '../../lib/dates'
+import { memorisedPages } from '../../lib/quran'
 import type { StudentRecordBundle, Tip } from '../../lib/types'
 
 export default function StudentProgress() {
@@ -137,6 +139,8 @@ export default function StudentProgress() {
           bundle={bundle}
           emptyText={`No weeks recorded yet — ${course.name} starts on ${formatUKDate(course.start_date)}, in sha Allah.`}
         />
+
+        <QuranProgress memorised={memorisedPages(bundle)} />
 
         <div className="card">
           <h3>Weekly grid</h3>

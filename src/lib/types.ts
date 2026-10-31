@@ -59,6 +59,8 @@ export interface StudentFull {
   join_week: number
   target_pages: number | null
   active: boolean
+  /** Mushaf pages already memorised when they joined (only in record bundles). */
+  prior_pages?: number[]
 }
 
 export type RecordValues = Record<string, number | boolean | null>
@@ -71,6 +73,9 @@ export interface WeeklyRecord {
   values: RecordValues
   note: string | null
   next_assignment: string | null
+  /** Mushaf page range of that week's new hifz (null if not entered). */
+  hifz_from_page?: number | null
+  hifz_to_page?: number | null
   /** Who wrote the note / next assignment (may be null on older rows). */
   note_by?: string | null
   created_by: string | null

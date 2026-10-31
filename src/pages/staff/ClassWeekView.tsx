@@ -163,6 +163,8 @@ export default function ClassWeekView() {
               values: data.values,
               note: data.note,
               nextAssignment: data.nextAssignment,
+              fromPage: data.fromPage,
+              toPage: data.toPage,
             })
             setEditing(null)
             await loadRoster()
@@ -177,6 +179,8 @@ export default function ClassWeekView() {
               values: data.values,
               note: data.note,
               nextAssignment: data.nextAssignment,
+              fromPage: data.fromPage,
+              toPage: data.toPage,
             })
             await loadRoster()
             await openNextUnrecorded(editing.studentId)
