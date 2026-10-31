@@ -80,7 +80,7 @@ export default function FindRecord() {
                   {results.map((r) => (
                     <li key={r.id}>
                       <button type="button" onClick={() => setSelected(r)}>
-                        {r.first_name} {r.last_initial}.
+                        {r.first_name} {r.last_initial}.<span className="muted"> &middot; {r.course_name}</span>
                       </button>
                     </li>
                   ))}

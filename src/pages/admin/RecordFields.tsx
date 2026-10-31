@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react'
 import AdminGuard from '../../components/AdminGuard'
-import { ErrorBanner, LoadingState, SuccessBanner } from '../../components/LoadingAndEmpty'
+import { EmptyState, ErrorBanner, LoadingState, SuccessBanner } from '../../components/LoadingAndEmpty'
 import { getRecordFieldsAdmin, upsertRecordField } from '../../lib/api'
 import { useAuth } from '../../context/AuthContext'
+import { useCourse } from '../../context/CourseContext'
 import type { RecordField } from '../../lib/types'
 
 const emptyForm = { key: '', label: '', type: 'number' as 'number' | 'yesno', unit: '', active: true }
 
 export default function RecordFields() {
   const { session } = useAuth()
+  const { course } = useCourse()
   const [fields, setFields] = useState<RecordField[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -17,10 +19,10 @@ export default function RecordFields() {
   const [editingKey, setEditingKey] = useState<string | null>(null)
 
   async function load() {
-    if (!session) return
+    if (!session || !course) return
     setLoading(true)
     try {
-      const rows = await getRecordFieldsAdmin(session.token)
+      const rows = await getRecordFieldsAdmin(session.token, course.id)
       setFields(rows.sort((a, b) => a.sort_order - b.sort_order))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load fields.')
@@ -30,9 +32,13 @@ export default function RecordFields() {
   }
 
   useEffect(() => {
+    setForm(emptyForm)
+    setEditingKey(null)
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session])
+  }, [session, course?.id])
+
+  if (!course) return <EmptyState text="Add a course on the Courses tab first." />
 
   function startEdit(f: RecordField) {
     setEditingKey(f.key)
@@ -41,14 +47,14 @@ export default function RecordFields() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!session) return
+    if (!session || !course) return
     setError(null)
     setMessage(null)
     try {
       const sortOrder = editingKey
         ? fields.find((f) => f.key === editingKey)?.sort_order ?? fields.length
         : fields.length
-      await upsertRecordField(session.token, {
+      await upsertRecordField(session.token, course.id, {
         key: form.key.trim(),
         label: form.label.trim(),
         type: form.type,
@@ -66,13 +72,13 @@ export default function RecordFields() {
   }
 
   async function move(f: RecordField, direction: -1 | 1) {
-    if (!session) return
+    if (!session || !course) return
     const idx = fields.findIndex((x) => x.key === f.key)
     const swapIdx = idx + direction
     if (swapIdx < 0 || swapIdx >= fields.length) return
     const other = fields[swapIdx]
     await Promise.all([
-      upsertRecordField(session.token, {
+      upsertRecordField(session.token, course.id, {
         key: f.key,
         label: f.label,
         type: f.type,
@@ -80,7 +86,7 @@ export default function RecordFields() {
         sortOrder: other.sort_order,
         active: f.active,
       }),
-      upsertRecordField(session.token, {
+      upsertRecordField(session.token, course.id, {
         key: other.key,
         label: other.label,
         type: other.type,
@@ -93,8 +99,8 @@ export default function RecordFields() {
   }
 
   async function toggleActive(f: RecordField) {
-    if (!session) return
-    await upsertRecordField(session.token, {
+    if (!session || !course) return
+    await upsertRecordField(session.token, course.id, {
       key: f.key,
       label: f.label,
       type: f.type,
@@ -171,7 +177,7 @@ export default function RecordFields() {
       </div>
 
       <div className="card">
-        <h3 className="mt-0">Fields</h3>
+        <h3 className="mt-0">Fields for {course.name}</h3>
         {loading ? (
           <LoadingState />
         ) : (

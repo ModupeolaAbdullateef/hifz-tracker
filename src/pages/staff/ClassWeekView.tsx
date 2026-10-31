@@ -1,20 +1,20 @@
 import { useCallback, useEffect, useState } from 'react'
 import RecordEditSheet from '../../components/RecordEditSheet'
-import { ErrorBanner, LoadingState } from '../../components/LoadingAndEmpty'
-import { getStudentGrid, getWeekRoster, saveWeeklyRecord } from '../../lib/api'
+import { EmptyState, ErrorBanner, LoadingState } from '../../components/LoadingAndEmpty'
+import { getCourseWeeks, getStudentGrid, getWeekRoster, saveWeeklyRecord } from '../../lib/api'
 import { useAuth } from '../../context/AuthContext'
+import { useCourse } from '../../context/CourseContext'
 import { formatUKDate, getCurrentWeekNumber, weekByNumber } from '../../lib/dates'
-import type { RecordField, WeekRosterRow, WeeklyRecord } from '../../lib/types'
-
-const WEEK_NUMBERS = Array.from({ length: 10 }, (_, i) => i + 1)
+import type { CourseWeek, RecordField, WeekRosterRow, WeeklyRecord } from '../../lib/types'
 
 export default function ClassWeekView() {
   const { session } = useAuth()
-  const [weekNumber, setWeekNumber] = useState(1)
+  const { course } = useCourse()
+  const [weeks, setWeeks] = useState<CourseWeek[]>([])
+  const [weekNumber, setWeekNumber] = useState<number | null>(null)
   const [roster, setRoster] = useState<WeekRosterRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [weekDate, setWeekDate] = useState('')
   const [editing, setEditing] = useState<{
     studentId: string
     label: string
@@ -23,50 +23,38 @@ export default function ClassWeekView() {
   } | null>(null)
 
   useEffect(() => {
-    // Default to the current week once we know the course schedule.
-    if (!session) return
-    getStudentGridAny(session.token).then((weeks) => {
-      if (weeks) setWeekNumber(getCurrentWeekNumber(weeks))
-    })
-  }, [session])
+    // Load the selected course's schedule and default to its current week.
+    if (!session || !course) return
+    setWeekNumber(null)
+    getCourseWeeks(session.token, course.id)
+      .then((rows) => {
+        setWeeks(rows)
+        setWeekNumber(getCurrentWeekNumber(rows))
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : 'Could not load the course weeks.'))
+  }, [session, course])
 
-  async function getStudentGridAny(token: string) {
-    try {
-      const roster0 = await getWeekRoster(token, 1)
-      if (roster0.length === 0) return null
-      const bundle = await getStudentGrid(token, roster0[0].student_id)
-      setWeekDate(bundle.weeks[0]?.class_date ?? '')
-      return bundle.weeks
-    } catch {
-      return null
-    }
-  }
+  const weekDate = weekNumber === null ? '' : weekByNumber(weeks, weekNumber)?.class_date ?? ''
 
   const loadRoster = useCallback(async () => {
-    if (!session) return
+    if (!session || !course || weekNumber === null) return
     setLoading(true)
     setError(null)
     try {
-      const rows = await getWeekRoster(session.token, weekNumber)
-      setRoster(rows)
-      if (rows.length > 0) {
-        const bundle = await getStudentGrid(session.token, rows[0].student_id)
-        const w = weekByNumber(bundle.weeks, weekNumber)
-        setWeekDate(w?.class_date ?? '')
-      }
+      setRoster(await getWeekRoster(session.token, course.id, weekNumber))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load the roster.')
     } finally {
       setLoading(false)
     }
-  }, [session, weekNumber])
+  }, [session, course, weekNumber])
 
   useEffect(() => {
     loadRoster()
   }, [loadRoster])
 
   async function openStudent(row: WeekRosterRow) {
-    if (!session) return
+    if (!session || weekNumber === null) return
     const bundle = await getStudentGrid(session.token, row.student_id)
     setEditing({
       studentId: row.student_id,
@@ -77,8 +65,8 @@ export default function ClassWeekView() {
   }
 
   async function openNextUnrecorded(afterStudentId: string) {
-    if (!session) return
-    const freshRoster = await getWeekRoster(session.token, weekNumber)
+    if (!session || !course || weekNumber === null) return
+    const freshRoster = await getWeekRoster(session.token, course.id, weekNumber)
     const idx = freshRoster.findIndex((r) => r.student_id === afterStudentId)
     const rest = [...freshRoster.slice(idx + 1), ...freshRoster.slice(0, idx + 1)]
     const next = rest.find((r) => !r.has_record) ?? rest.find((r) => r.student_id !== afterStudentId)
@@ -91,16 +79,23 @@ export default function ClassWeekView() {
 
   const recordedCount = roster.filter((r) => r.has_record).length
 
+  if (!course) return <EmptyState text="No courses yet. The admin can add one on the Courses tab." />
+
   return (
     <div>
       <div className="card">
         <div className="flex-between flex-wrap gap-2">
           <div className="field" style={{ marginBottom: 0 }}>
             <label htmlFor="week-select">Week</label>
-            <select id="week-select" value={weekNumber} onChange={(e) => setWeekNumber(Number(e.target.value))}>
-              {WEEK_NUMBERS.map((w) => (
-                <option key={w} value={w}>
-                  Week {w}
+            <select
+              id="week-select"
+              value={weekNumber ?? ''}
+              onChange={(e) => setWeekNumber(Number(e.target.value))}
+            >
+              {weeks.map((w) => (
+                <option key={w.week_number} value={w.week_number}>
+                  Week {w.week_number}
+                  {w.cancelled ? ' (cancelled)' : ''}
                 </option>
               ))}
             </select>
@@ -117,6 +112,8 @@ export default function ClassWeekView() {
       {error && <ErrorBanner text={error} />}
       {loading ? (
         <LoadingState />
+      ) : roster.length === 0 ? (
+        <EmptyState text={`No active students in ${course.name} yet.`} />
       ) : (
         <div className="card">
           <ul className="search-results">
@@ -148,7 +145,7 @@ export default function ClassWeekView() {
         </div>
       )}
 
-      {editing && (
+      {editing && weekNumber !== null && (
         <RecordEditSheet
           studentLabel={editing.label}
           weekNumber={weekNumber}

@@ -26,6 +26,17 @@ export function clearStaffSession() {
   sessionStorage.removeItem(STAFF_KEY)
 }
 
+const COURSE_KEY = 'hifz_selected_course'
+
+export function loadSelectedCourseId(): number | null {
+  const raw = sessionStorage.getItem(COURSE_KEY)
+  return raw ? Number(raw) : null
+}
+
+export function saveSelectedCourseId(id: number) {
+  sessionStorage.setItem(COURSE_KEY, String(id))
+}
+
 export interface StudentSession {
   studentId: string
   code: string

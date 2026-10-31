@@ -8,7 +8,7 @@ import StudentSummary from '../../components/StudentSummary'
 import { ErrorBanner, LoadingState } from '../../components/LoadingAndEmpty'
 import { getActiveTips, getStudentRecord } from '../../lib/api'
 import { clearStudentSession, loadStudentSession, saveStudentSession } from '../../lib/session'
-import { getCurrentWeekNumber } from '../../lib/dates'
+import { formatUKDate, getCurrentWeekNumber } from '../../lib/dates'
 import type { StudentRecordBundle, Tip } from '../../lib/types'
 
 export default function StudentProgress() {
@@ -135,7 +135,7 @@ export default function StudentProgress() {
 
         <StudentSummary
           bundle={bundle}
-          emptyText="No weeks recorded yet — your journey starts on Thursday 15 October, in sha Allah."
+          emptyText={`No weeks recorded yet — ${course.name} starts on ${formatUKDate(course.start_date)}, in sha Allah.`}
         />
 
         <div className="card">

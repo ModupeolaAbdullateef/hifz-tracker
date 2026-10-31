@@ -16,25 +16,36 @@ create extension if not exists pgcrypto;
 -- Tables
 -- ============================================================
 
+-- One row per course. (Originally a single-row table; the multi-course
+-- migration below lifts that restriction and keeps the original course as
+-- id 1 so existing students/weeks/fields carry over untouched.)
 create table if not exists course (
-  id smallint primary key default 1,
+  id smallint primary key,
   name text not null default 'Hifz Class',
   start_date date not null,
   weeks int not null default 10,
   class_weekday smallint not null default 4, -- 4 = Thursday (ISO-ish, 0=Sun..6=Sat here)
-  target_pages numeric,
-  constraint course_single_row check (id = 1)
+  target_pages numeric
 );
 
+alter table course drop constraint if exists course_single_row;
+alter table course add column if not exists active boolean not null default true;
+alter table course add column if not exists created_at timestamptz not null default now();
+create sequence if not exists course_id_seq as smallint owned by course.id;
+alter table course alter column id set default nextval('course_id_seq');
+
 create table if not exists course_weeks (
-  week_number int primary key,
+  course_id smallint not null references course (id) on delete cascade,
+  week_number int not null,
   class_date date not null,
   cancelled boolean not null default false,
-  note text
+  note text,
+  primary key (course_id, week_number)
 );
 
 create table if not exists students (
   id uuid primary key default gen_random_uuid(),
+  course_id smallint not null references course (id),
   first_name text not null,
   last_name text not null,
   student_code text not null unique,
@@ -47,13 +58,49 @@ create table if not exists students (
 create index if not exists idx_students_active on students (active);
 
 create table if not exists record_fields (
-  key text primary key,
+  course_id smallint not null references course (id) on delete cascade,
+  key text not null,
   label text not null,
   type text not null check (type in ('number', 'yesno')),
   unit text,
   sort_order int not null default 0,
-  active boolean not null default true
+  active boolean not null default true,
+  primary key (course_id, key)
 );
+
+-- Multi-course migration for databases created before courses existed:
+-- add course_id to weeks/students/fields (backfilled to the original
+-- course, id 1) and widen the week/field primary keys to include it.
+do $$
+begin
+  if not exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'course_weeks' and column_name = 'course_id') then
+    insert into course (id, name, start_date) values (1, 'Hifz Class', date '2026-10-15') on conflict (id) do nothing;
+    alter table course_weeks add column course_id smallint not null default 1 references course (id) on delete cascade;
+    alter table course_weeks alter column course_id drop default;
+    alter table course_weeks drop constraint course_weeks_pkey;
+    alter table course_weeks add primary key (course_id, week_number);
+  end if;
+
+  if not exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'students' and column_name = 'course_id') then
+    insert into course (id, name, start_date) values (1, 'Hifz Class', date '2026-10-15') on conflict (id) do nothing;
+    alter table students add column course_id smallint not null default 1 references course (id);
+    alter table students alter column course_id drop default;
+  end if;
+
+  if not exists (select 1 from information_schema.columns
+                 where table_schema = 'public' and table_name = 'record_fields' and column_name = 'course_id') then
+    insert into course (id, name, start_date) values (1, 'Hifz Class', date '2026-10-15') on conflict (id) do nothing;
+    alter table record_fields add column course_id smallint not null default 1 references course (id) on delete cascade;
+    alter table record_fields alter column course_id drop default;
+    alter table record_fields drop constraint record_fields_pkey;
+    alter table record_fields add primary key (course_id, key);
+  end if;
+end;
+$$;
+
+create index if not exists idx_students_course on students (course_id);
 
 create table if not exists weekly_records (
   id uuid primary key default gen_random_uuid(),
@@ -198,13 +245,13 @@ begin
     raise exception 'Student not found.';
   end if;
 
-  select to_jsonb(c) into v_course from course c where c.id = 1;
+  select to_jsonb(c) into v_course from course c where c.id = (v_student ->> 'course_id')::smallint;
 
   select coalesce(jsonb_agg(to_jsonb(w) order by w.week_number), '[]'::jsonb)
-    into v_weeks from course_weeks w;
+    into v_weeks from course_weeks w where w.course_id = (v_student ->> 'course_id')::smallint;
 
   select coalesce(jsonb_agg(to_jsonb(f) order by f.sort_order), '[]'::jsonb)
-    into v_fields from record_fields f where f.active;
+    into v_fields from record_fields f where f.active and f.course_id = (v_student ->> 'course_id')::smallint;
 
   select coalesce(jsonb_agg(to_jsonb(r) order by r.week_number), '[]'::jsonb)
     into v_records from weekly_records r where r.student_id = p_student_id;
@@ -237,8 +284,9 @@ $$;
 -- Public functions
 -- ============================================================
 
+drop function if exists search_students(text);
 create or replace function search_students(p_q text)
-returns table (id uuid, first_name text, last_initial text)
+returns table (id uuid, first_name text, last_initial text, course_name text)
 language plpgsql
 security definer
 set search_path = public, pg_temp
@@ -249,8 +297,9 @@ begin
   end if;
 
   return query
-    select s.id, s.first_name, upper(left(s.last_name, 1))
+    select s.id, s.first_name, upper(left(s.last_name, 1)), c.name
     from students s
+    join course c on c.id = s.course_id
     where s.active
       and (s.first_name ilike '%' || trim(p_q) || '%' or s.last_name ilike '%' || trim(p_q) || '%')
     order by s.first_name, s.last_name
@@ -381,8 +430,13 @@ grant execute on function staff_logout(uuid) to anon;
 -- Teacher functions (token role: teacher or admin)
 -- ============================================================
 
-create or replace function staff_search_students(p_token uuid, p_q text)
-returns table (id uuid, first_name text, last_name text, student_code text, join_week int, target_pages numeric, active boolean)
+-- Lists every course for the staff course picker, with a count of active
+-- students in each.
+create or replace function list_courses(p_token uuid)
+returns table (
+  id smallint, name text, start_date date, weeks int, class_weekday smallint,
+  target_pages numeric, active boolean, student_count int
+)
 language plpgsql
 security definer
 set search_path = public, pg_temp
@@ -391,15 +445,39 @@ begin
   perform validate_session(p_token, 'teacher');
 
   return query
-    select s.id, s.first_name, s.last_name, s.student_code, s.join_week, s.target_pages, s.active
+    select c.id, c.name, c.start_date, c.weeks, c.class_weekday, c.target_pages, c.active,
+      (select count(*)::int from students s where s.course_id = c.id and s.active)
+    from course c
+    order by c.active desc, c.start_date desc, c.name;
+end;
+$$;
+
+grant execute on function list_courses(uuid) to anon;
+
+drop function if exists staff_search_students(uuid, text);
+create or replace function staff_search_students(p_token uuid, p_course_id int, p_q text)
+returns table (
+  id uuid, course_id smallint, first_name text, last_name text, student_code text,
+  join_week int, target_pages numeric, active boolean
+)
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform validate_session(p_token, 'teacher');
+
+  return query
+    select s.id, s.course_id, s.first_name, s.last_name, s.student_code, s.join_week, s.target_pages, s.active
     from students s
     where s.active
+      and s.course_id = p_course_id
       and (p_q is null or trim(p_q) = '' or s.first_name ilike '%' || trim(p_q) || '%' or s.last_name ilike '%' || trim(p_q) || '%')
     order by s.first_name, s.last_name;
 end;
 $$;
 
-grant execute on function staff_search_students(uuid, text) to anon;
+grant execute on function staff_search_students(uuid, int, text) to anon;
 
 create or replace function get_student_grid(p_token uuid, p_student_id uuid)
 returns jsonb
@@ -451,7 +529,10 @@ begin
   if p_status = 'absent' then
     v_values := '{}'::jsonb;
   else
-    for v_field in select * from record_fields where active loop
+    for v_field in
+      select f.* from record_fields f join students s on s.course_id = f.course_id
+      where s.id = p_student_id and f.active
+    loop
       if v_values ? v_field.key and v_values -> v_field.key <> 'null'::jsonb then
         if v_field.type = 'yesno' and jsonb_typeof(v_values -> v_field.key) <> 'boolean' then
           raise exception 'Field % must be yes/no.', v_field.label;
@@ -528,7 +609,7 @@ begin
   end if;
 
   select coalesce(s.target_pages, c.target_pages) into v_target
-  from students s, course c where s.id = p_student_id and c.id = 1;
+  from students s join course c on c.id = s.course_id where s.id = p_student_id;
 
   if v_target is not null and v_total_new_hifz >= v_target then
     insert into badges (student_id, badge_key) values (p_student_id, 'target_reached') on conflict do nothing;
@@ -538,7 +619,8 @@ $$;
 
 grant execute on function save_weekly_record(uuid, uuid, int, text, boolean, jsonb, text, text) to anon;
 
-create or replace function get_week_roster(p_token uuid, p_week_number int)
+drop function if exists get_week_roster(uuid, int);
+create or replace function get_week_roster(p_token uuid, p_course_id int, p_week_number int)
 returns table (student_id uuid, first_name text, last_name text, has_record boolean, status text, good_week boolean)
 language plpgsql
 security definer
@@ -557,14 +639,15 @@ begin
       coalesce(r.good_week, false)
     from students s
     left join weekly_records r on r.student_id = s.id and r.week_number = p_week_number
-    where s.active
+    where s.active and s.course_id = p_course_id
     order by s.first_name, s.last_name;
 end;
 $$;
 
-grant execute on function get_week_roster(uuid, int) to anon;
+grant execute on function get_week_roster(uuid, int, int) to anon;
 
-create or replace function get_class_overview(p_token uuid)
+drop function if exists get_class_overview(uuid);
+create or replace function get_class_overview(p_token uuid, p_course_id int)
 returns table (
   student_id uuid,
   first_name text,
@@ -589,9 +672,10 @@ begin
 
   select count(*) into v_weeks_elapsed
   from course_weeks w
-  where w.class_date <= (now() at time zone 'Europe/London')::date and not w.cancelled;
+  where w.course_id = p_course_id
+    and w.class_date <= (now() at time zone 'Europe/London')::date and not w.cancelled;
 
-  select c.weeks, c.target_pages into v_total_weeks, v_default_target from course c where c.id = 1;
+  select c.weeks, c.target_pages into v_total_weeks, v_default_target from course c where c.id = p_course_id;
 
   return query
     select
@@ -614,20 +698,21 @@ begin
       end as on_track
     from students s
     left join weekly_records r on r.student_id = s.id
-    where s.active
+    where s.active and s.course_id = p_course_id
     group by s.id, s.first_name, s.last_name, s.target_pages
     order by s.first_name, s.last_name;
 end;
 $$;
 
-grant execute on function get_class_overview(uuid) to anon;
+grant execute on function get_class_overview(uuid, int) to anon;
 
 -- ============================================================
 -- Admin-only functions
 -- ============================================================
 
+drop function if exists upsert_student(uuid, uuid, text, text, int, numeric);
 create or replace function upsert_student(
-  p_token uuid, p_id uuid, p_first_name text, p_last_name text, p_join_week int, p_target_pages numeric
+  p_token uuid, p_id uuid, p_course_id int, p_first_name text, p_last_name text, p_join_week int, p_target_pages numeric
 )
 returns jsonb
 language plpgsql
@@ -644,17 +729,22 @@ begin
     raise exception 'First and last name are required.';
   end if;
 
+  if not exists (select 1 from course where id = p_course_id) then
+    raise exception 'Please choose a course.';
+  end if;
+
   if v_id is null then
     loop
       v_code := 'HZ-' || lpad(floor(random() * 10000)::int::text, 4, '0');
       exit when not exists (select 1 from students where student_code = v_code);
     end loop;
 
-    insert into students (first_name, last_name, student_code, join_week, target_pages)
-    values (trim(p_first_name), trim(p_last_name), v_code, coalesce(p_join_week, 1), p_target_pages)
+    insert into students (course_id, first_name, last_name, student_code, join_week, target_pages)
+    values (p_course_id, trim(p_first_name), trim(p_last_name), v_code, coalesce(p_join_week, 1), p_target_pages)
     returning id into v_id;
   else
     update students set
+      course_id = p_course_id,
       first_name = trim(p_first_name),
       last_name = trim(p_last_name),
       join_week = coalesce(p_join_week, join_week),
@@ -667,7 +757,7 @@ begin
 end;
 $$;
 
-grant execute on function upsert_student(uuid, uuid, text, text, int, numeric) to anon;
+grant execute on function upsert_student(uuid, uuid, int, text, text, int, numeric) to anon;
 
 create or replace function deactivate_student(p_token uuid, p_student_id uuid, p_active boolean)
 returns void
@@ -682,6 +772,22 @@ end;
 $$;
 
 grant execute on function deactivate_student(uuid, uuid, boolean) to anon;
+
+-- Permanently removes a student. Their weekly records and badges go with
+-- them (on delete cascade); use deactivate_student to keep the history.
+create or replace function delete_student(p_token uuid, p_student_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform validate_session(p_token, 'admin');
+  delete from students where id = p_student_id;
+end;
+$$;
+
+grant execute on function delete_student(uuid, uuid) to anon;
 
 create or replace function regenerate_student_code(p_token uuid, p_student_id uuid)
 returns jsonb
@@ -706,7 +812,61 @@ $$;
 
 grant execute on function regenerate_student_code(uuid, uuid) to anon;
 
-create or replace function update_course(p_token uuid, p_name text, p_start_date date, p_weeks int, p_target_pages numeric)
+-- Creates a course with its week schedule. Record fields are copied from
+-- p_copy_fields_from when given, otherwise the course starts with the
+-- default Hifz fields.
+create or replace function create_course(
+  p_token uuid, p_name text, p_start_date date, p_weeks int, p_target_pages numeric, p_copy_fields_from int
+)
+returns smallint
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_id smallint;
+begin
+  perform validate_session(p_token, 'admin');
+
+  if p_name is null or trim(p_name) = '' then
+    raise exception 'Course name is required.';
+  end if;
+  if p_start_date is null then
+    raise exception 'Start date is required.';
+  end if;
+  if p_weeks is null or p_weeks < 1 or p_weeks > 52 then
+    raise exception 'Number of weeks must be between 1 and 52.';
+  end if;
+
+  insert into course (name, start_date, weeks, target_pages)
+  values (trim(p_name), p_start_date, p_weeks, p_target_pages)
+  returning id into v_id;
+
+  insert into course_weeks (course_id, week_number, class_date)
+  select v_id, gs, p_start_date + ((gs - 1) * 7) from generate_series(1, p_weeks) gs;
+
+  if p_copy_fields_from is not null and exists (select 1 from record_fields where course_id = p_copy_fields_from) then
+    insert into record_fields (course_id, key, label, type, unit, sort_order, active)
+    select v_id, f.key, f.label, f.type, f.unit, f.sort_order, f.active
+    from record_fields f where f.course_id = p_copy_fields_from;
+  else
+    insert into record_fields (course_id, key, label, type, unit, sort_order, active) values
+      (v_id, 'new_hifz', 'New Hifz', 'number', 'pages', 1, true),
+      (v_id, 'old_hifz', 'Old Hifz', 'number', 'pages', 2, true),
+      (v_id, 'revision', 'Revision', 'yesno', null, 3, true),
+      (v_id, 'tajweed', 'Tajweed', 'yesno', null, 4, true);
+  end if;
+
+  return v_id;
+end;
+$$;
+
+grant execute on function create_course(uuid, text, date, int, numeric, int) to anon;
+
+drop function if exists update_course(uuid, text, date, int, numeric);
+create or replace function update_course(
+  p_token uuid, p_course_id int, p_name text, p_start_date date, p_weeks int, p_target_pages numeric
+)
 returns void
 language plpgsql
 security definer
@@ -717,26 +877,32 @@ declare
 begin
   perform validate_session(p_token, 'admin');
 
+  if p_weeks is null or p_weeks < 1 or p_weeks > 52 then
+    raise exception 'Number of weeks must be between 1 and 52.';
+  end if;
+
   update course set
     name = p_name,
     start_date = p_start_date,
     weeks = p_weeks,
     target_pages = p_target_pages
-  where id = 1;
+  where id = p_course_id;
 
   for i in 1..p_weeks loop
-    insert into course_weeks (week_number, class_date)
-    values (i, p_start_date + ((i - 1) * 7))
-    on conflict (week_number) do update set class_date = excluded.class_date;
+    insert into course_weeks (course_id, week_number, class_date)
+    values (p_course_id, i, p_start_date + ((i - 1) * 7))
+    on conflict (course_id, week_number) do update set class_date = excluded.class_date;
   end loop;
 
-  delete from course_weeks where week_number > p_weeks;
+  delete from course_weeks where course_id = p_course_id and week_number > p_weeks;
 end;
 $$;
 
-grant execute on function update_course(uuid, text, date, int, numeric) to anon;
+grant execute on function update_course(uuid, int, text, date, int, numeric) to anon;
 
-create or replace function set_week_cancelled(p_token uuid, p_week_number int, p_cancelled boolean, p_note text)
+-- Archiving hides a course from the staff picker's default view but keeps
+-- everything; it can be reactivated at any time.
+create or replace function set_course_active(p_token uuid, p_course_id int, p_active boolean)
 returns void
 language plpgsql
 security definer
@@ -744,14 +910,56 @@ set search_path = public, pg_temp
 as $$
 begin
   perform validate_session(p_token, 'admin');
-  update course_weeks set cancelled = p_cancelled, note = p_note where week_number = p_week_number;
+  update course set active = p_active where id = p_course_id;
 end;
 $$;
 
-grant execute on function set_week_cancelled(uuid, int, boolean, text) to anon;
+grant execute on function set_course_active(uuid, int, boolean) to anon;
 
+-- Only empty courses can be deleted, so a slip can never wipe out students.
+create or replace function delete_course(p_token uuid, p_course_id int)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform validate_session(p_token, 'admin');
+
+  if exists (select 1 from students where course_id = p_course_id) then
+    raise exception 'This course still has students. Move or delete them first, or archive the course instead.';
+  end if;
+  if (select count(*) from course) <= 1 then
+    raise exception 'You need at least one course.';
+  end if;
+
+  delete from course where id = p_course_id;
+end;
+$$;
+
+grant execute on function delete_course(uuid, int) to anon;
+
+drop function if exists set_week_cancelled(uuid, int, boolean, text);
+create or replace function set_week_cancelled(
+  p_token uuid, p_course_id int, p_week_number int, p_cancelled boolean, p_note text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+  perform validate_session(p_token, 'admin');
+  update course_weeks set cancelled = p_cancelled, note = p_note
+  where course_id = p_course_id and week_number = p_week_number;
+end;
+$$;
+
+grant execute on function set_week_cancelled(uuid, int, int, boolean, text) to anon;
+
+drop function if exists upsert_record_field(uuid, text, text, text, text, int, boolean);
 create or replace function upsert_record_field(
-  p_token uuid, p_key text, p_label text, p_type text, p_unit text, p_sort_order int, p_active boolean
+  p_token uuid, p_course_id int, p_key text, p_label text, p_type text, p_unit text, p_sort_order int, p_active boolean
 )
 returns void
 language plpgsql
@@ -765,9 +973,9 @@ begin
     raise exception 'Invalid field type.';
   end if;
 
-  insert into record_fields (key, label, type, unit, sort_order, active)
-  values (p_key, p_label, p_type, p_unit, p_sort_order, p_active)
-  on conflict (key) do update set
+  insert into record_fields (course_id, key, label, type, unit, sort_order, active)
+  values (p_course_id, p_key, p_label, p_type, p_unit, p_sort_order, p_active)
+  on conflict (course_id, key) do update set
     label = excluded.label,
     type = excluded.type,
     unit = excluded.unit,
@@ -776,7 +984,7 @@ begin
 end;
 $$;
 
-grant execute on function upsert_record_field(uuid, text, text, text, text, int, boolean) to anon;
+grant execute on function upsert_record_field(uuid, int, text, text, text, text, int, boolean) to anon;
 
 create or replace function upsert_tip(p_token uuid, p_id uuid, p_category text, p_text text, p_active boolean, p_sort_order int)
 returns void
@@ -837,7 +1045,8 @@ $$;
 
 grant execute on function set_codes(uuid, text, text) to anon;
 
-create or replace function export_class(p_token uuid)
+drop function if exists export_class(uuid);
+create or replace function export_class(p_token uuid, p_course_id int)
 returns jsonb
 language plpgsql
 security definer
@@ -864,23 +1073,28 @@ begin
         'status', coalesce(r.status, ''),
         'good_week', coalesce(r.good_week, false)
       ) || coalesce(
-        (select jsonb_object_agg(f.key, r.values -> f.key) from record_fields f where r.id is not null),
+        (select jsonb_object_agg(f.key, r.values -> f.key) from record_fields f
+         where f.course_id = p_course_id and r.id is not null),
         '{}'::jsonb
       ) as row_data
     from students s
-    cross join course_weeks w
+    join course_weeks w on w.course_id = s.course_id
     left join weekly_records r on r.student_id = s.id and r.week_number = w.week_number
-    where s.active
+    where s.active and s.course_id = p_course_id
   ) t;
 
   return v_rows;
 end;
 $$;
 
-grant execute on function export_class(uuid) to anon;
+grant execute on function export_class(uuid, int) to anon;
 
-create or replace function admin_list_students(p_token uuid)
-returns table (id uuid, first_name text, last_name text, student_code text, join_week int, target_pages numeric, active boolean)
+drop function if exists admin_list_students(uuid);
+create or replace function admin_list_students(p_token uuid, p_course_id int)
+returns table (
+  id uuid, course_id smallint, first_name text, last_name text, student_code text,
+  join_week int, target_pages numeric, active boolean
+)
 language plpgsql
 security definer
 set search_path = public, pg_temp
@@ -889,13 +1103,14 @@ begin
   perform validate_session(p_token, 'admin');
 
   return query
-    select s.id, s.first_name, s.last_name, s.student_code, s.join_week, s.target_pages, s.active
+    select s.id, s.course_id, s.first_name, s.last_name, s.student_code, s.join_week, s.target_pages, s.active
     from students s
+    where s.course_id = p_course_id
     order by s.active desc, s.first_name, s.last_name;
 end;
 $$;
 
-grant execute on function admin_list_students(uuid) to anon;
+grant execute on function admin_list_students(uuid, int) to anon;
 
 create or replace function admin_list_tips(p_token uuid)
 returns table (id uuid, category text, text text, active boolean, sort_order int)
@@ -911,7 +1126,8 @@ $$;
 
 grant execute on function admin_list_tips(uuid) to anon;
 
-create or replace function get_record_fields(p_token uuid)
+drop function if exists get_record_fields(uuid);
+create or replace function get_record_fields(p_token uuid, p_course_id int)
 returns table (key text, label text, type text, unit text, sort_order int, active boolean)
 language plpgsql
 security definer
@@ -919,29 +1135,36 @@ set search_path = public, pg_temp
 as $$
 begin
   perform validate_session(p_token, 'admin');
-  return query select f.key, f.label, f.type, f.unit, f.sort_order, f.active from record_fields f order by f.sort_order;
+  return query
+    select f.key, f.label, f.type, f.unit, f.sort_order, f.active
+    from record_fields f where f.course_id = p_course_id order by f.sort_order;
 end;
 $$;
 
-grant execute on function get_record_fields(uuid) to anon;
+grant execute on function get_record_fields(uuid, int) to anon;
 
-create or replace function get_course_weeks(p_token uuid)
+-- Teacher-level: the "This week" view needs each course's schedule.
+drop function if exists get_course_weeks(uuid);
+create or replace function get_course_weeks(p_token uuid, p_course_id int)
 returns table (week_number int, class_date date, cancelled boolean, note text)
 language plpgsql
 security definer
 set search_path = public, pg_temp
 as $$
 begin
-  perform validate_session(p_token, 'admin');
-  return query select w.week_number, w.class_date, w.cancelled, w.note from course_weeks w order by w.week_number;
+  perform validate_session(p_token, 'teacher');
+  return query
+    select w.week_number, w.class_date, w.cancelled, w.note
+    from course_weeks w where w.course_id = p_course_id order by w.week_number;
 end;
 $$;
 
-grant execute on function get_course_weeks(uuid) to anon;
+grant execute on function get_course_weeks(uuid, int) to anon;
 
 -- Returns a single composite row (not SETOF), so Supabase hands the
 -- frontend one JSON object rather than a one-element array.
-create or replace function get_course(p_token uuid)
+drop function if exists get_course(uuid);
+create or replace function get_course(p_token uuid, p_course_id int)
 returns course
 language plpgsql
 security definer
@@ -951,12 +1174,12 @@ declare
   v_course course;
 begin
   perform validate_session(p_token, 'admin');
-  select * into v_course from course c where c.id = 1;
+  select * into v_course from course c where c.id = p_course_id;
   return v_course;
 end;
 $$;
 
-grant execute on function get_course(uuid) to anon;
+grant execute on function get_course(uuid, int) to anon;
 
 -- ============================================================
 -- Useful Docs — admin-uploaded files, publicly downloadable.
@@ -1380,23 +1603,31 @@ $$;
 -- Seed data
 -- ============================================================
 
-insert into course (id, name, start_date, weeks, class_weekday, target_pages)
-values (1, 'Hifz Class', date '2026-10-15', 10, 4, null)
-on conflict (id) do nothing;
+-- First course, only on a brand-new database (never re-created once the
+-- admin has courses of their own).
+do $$
+begin
+  if not exists (select 1 from course) then
+    insert into course (id, name, start_date, weeks, class_weekday, target_pages)
+    values (1, 'Hifz Class', date '2026-10-15', 10, 4, null);
+
+    insert into course_weeks (course_id, week_number, class_date)
+    select 1, gs, (date '2026-10-15' + ((gs - 1) * 7))
+    from generate_series(1, 10) gs;
+
+    insert into record_fields (course_id, key, label, type, unit, sort_order, active) values
+      (1, 'new_hifz', 'New Hifz', 'number', 'pages', 1, true),
+      (1, 'old_hifz', 'Old Hifz', 'number', 'pages', 2, true),
+      (1, 'revision', 'Revision', 'yesno', null, 3, true),
+      (1, 'tajweed', 'Tajweed', 'yesno', null, 4, true);
+  end if;
+end;
+$$;
+
+-- Keep new course ids clear of the ones already used.
+select setval('course_id_seq', greatest((select max(id) from course), 1));
 
 insert into settings (id) values (1) on conflict (id) do nothing;
-
-insert into course_weeks (week_number, class_date)
-select gs, (date '2026-10-15' + ((gs - 1) * 7))
-from generate_series(1, 10) gs
-on conflict (week_number) do nothing;
-
-insert into record_fields (key, label, type, unit, sort_order, active) values
-  ('new_hifz', 'New Hifz', 'number', 'pages', 1, true),
-  ('old_hifz', 'Old Hifz', 'number', 'pages', 2, true),
-  ('revision', 'Revision', 'yesno', null, 3, true),
-  ('tajweed', 'Tajweed', 'yesno', null, 4, true)
-on conflict (key) do nothing;
 
 insert into tips (category, text, sort_order, active)
 select v.category, v.text, v.sort_order, true

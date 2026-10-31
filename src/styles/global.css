@@ -144,6 +144,38 @@ textarea {
   font-size: 0.85rem;
 }
 
+/* Staff course picker — sits above the tabs and scopes every staff page. */
+.course-picker {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  background: var(--brand-primary-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.course-picker label {
+  font-weight: 700;
+  color: var(--brand-primary-dark);
+}
+
+.course-picker select {
+  flex: 1 1 220px;
+  max-width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--brand-white);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.data-table tr.is-selected td {
+  background: var(--brand-primary-light);
+}
+
 .nav-tabs {
   display: flex;
   gap: var(--space-2);
@@ -212,13 +244,13 @@ textarea {
 .btn-primary {
   background: var(--header-gradient);
   color: var(--text-on-brand);
-  box-shadow: 0 2px 8px rgba(76, 40, 137, 0.28);
+  box-shadow: 0 2px 8px rgba(var(--brand-shadow-rgb), 0.28);
 }
 
 .btn-primary:hover:not(:disabled) {
   filter: brightness(1.1);
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(76, 40, 137, 0.34);
+  box-shadow: 0 4px 14px rgba(var(--brand-shadow-rgb), 0.34);
 }
 
 .btn-secondary {
@@ -487,7 +519,7 @@ textarea {
 }
 
 .tips-marquee__tag--announcement {
-  background: var(--accent-coral);
+  background: var(--accent);
   color: var(--brand-ink);
 }
 
@@ -612,7 +644,7 @@ textarea {
 }
 
 .cell-tag--good {
-  color: #4c7a2c;
+  color: var(--status-good-text);
 }
 
 /* ---------- Stat cards ---------- */
@@ -741,7 +773,7 @@ textarea {
 
 .pill--ontrack {
   background: var(--status-good-bg);
-  color: #4c7a2c;
+  color: var(--status-good-text);
 }
 
 .pill--behind {
@@ -769,7 +801,7 @@ textarea {
 
 .success-banner {
   background: var(--status-good-bg);
-  color: #3f6327;
+  color: var(--status-good-text);
   border-radius: var(--radius-md);
   padding: var(--space-3) var(--space-4);
   margin-bottom: var(--space-4);
@@ -810,7 +842,7 @@ textarea {
 .certificate .student-name {
   font-family: var(--font-display);
   font-size: 1.8rem;
-  color: var(--accent-coral-deep);
+  color: var(--accent-deep);
   font-weight: 800;
   margin: var(--space-4) 0;
 }
@@ -874,12 +906,12 @@ textarea {
   flex-wrap: wrap;
 }
 
-.btn-coral {
-  background: var(--accent-coral);
+.btn-accent {
+  background: var(--accent);
   color: var(--brand-ink);
 }
 
-.btn-coral:hover {
+.btn-accent:hover {
   filter: brightness(1.05);
 }
 
@@ -1009,7 +1041,7 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  border-top: 4px solid var(--accent-coral);
+  border-top: 4px solid var(--accent);
 }
 
 .story blockquote {
@@ -1026,8 +1058,8 @@ textarea {
 
 .story__stat {
   align-self: flex-start;
-  background: var(--accent-coral-light);
-  color: var(--accent-coral-deep);
+  background: var(--accent-light);
+  color: var(--accent-deep);
   border-radius: 999px;
   padding: 2px 10px;
   font-size: 0.78rem;
@@ -1071,7 +1103,7 @@ textarea {
 }
 
 .gallery__placeholder--2 {
-  background: var(--accent-coral-light);
+  background: var(--accent-light);
 }
 
 .gallery__item figcaption {
@@ -1162,13 +1194,13 @@ textarea {
 }
 
 .pill--status-new {
-  background: var(--accent-coral-light);
-  color: var(--accent-coral-deep);
+  background: var(--accent-light);
+  color: var(--accent-deep);
 }
 
 .pill--status-contacted {
   background: var(--status-good-bg);
-  color: #2f6b4c;
+  color: var(--status-good-text);
 }
 
 .pill--status-archived {

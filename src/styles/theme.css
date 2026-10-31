@@ -1,37 +1,41 @@
 :root {
-  /* Brand — deep purple + teal + coral, from the supplied style reference */
-  --brand-primary: #5b3a9e;
-  --brand-primary-dark: #3d2170;
-  --brand-primary-light: #f1ecfb;
-  --brand-secondary: #14b8a6;
-  --brand-secondary-light: #e3fbf7;
-  --accent-coral: #ff6f61;
-  --accent-coral-light: #ffeae7;
-  --accent-coral-deep: #d14d3e;
-  --brand-ink: #241642;
-  --brand-surface: #faf9fd;
-  --brand-surface-alt: #f1ecfb;
+  /* Brand — "Lagoon & Apricot": deep lagoon teal, soft seafoam, warm apricot.
+     Every text/background pairing below meets WCAG AA (4.5:1 for text,
+     3:1 for borders and the focus ring). Re-check contrast if you change one. */
+  --brand-primary: #1f6f8b;
+  --brand-primary-dark: #154c60;
+  --brand-primary-light: #e3f1f5;
+  --brand-secondary: #8fd3c1;
+  --brand-secondary-light: #e6f7f2;
+  --accent: #f6b36b;
+  --accent-light: #fff1e1;
+  --accent-deep: #9a4a12;
+  --brand-ink: #13303b;
+  --brand-surface: #f6fafb;
+  --brand-surface-alt: #e8f3f5;
   --brand-white: #ffffff;
-  --header-gradient: linear-gradient(135deg, #6d47b9 0%, #3d2170 100%);
+  --header-gradient: linear-gradient(135deg, #1f7896 0%, #154c60 100%);
+  --brand-shadow-rgb: 21, 76, 96;
 
   /* Status — kept recognisable as red = absent, green = good */
-  --status-absent: #e5484d;
+  --status-absent: #c0323a;
   --status-absent-bg: #fdecec;
-  --status-good: #30a46c;
-  --status-good-bg: #e6f6ee;
-  --status-future-bg: #f3f1fa;
-  --status-cancelled-bg: #e9e4f0;
+  --status-good: #5cc08e;
+  --status-good-bg: #e5f5ec;
+  --status-good-text: #1f6a3f;
+  --status-future-bg: #eef4f6;
+  --status-cancelled-bg: #e1e9ec;
 
   /* Text */
   --text-primary: var(--brand-ink);
-  --text-muted: #6b6380;
+  --text-muted: #53666d;
   --text-on-brand: #ffffff;
 
   /* Borders / shadows */
-  --border-subtle: #e6e0f2;
-  --border-strong: #c9bede;
-  --shadow-card: 0 2px 12px rgba(76, 40, 137, 0.1);
-  --shadow-pop: 0 10px 30px rgba(76, 40, 137, 0.22);
+  --border-subtle: #d6e6ea;
+  --border-strong: #6a8b95;
+  --shadow-card: 0 2px 12px rgba(var(--brand-shadow-rgb), 0.1);
+  --shadow-pop: 0 10px 30px rgba(var(--brand-shadow-rgb), 0.22);
 
   /* Radii / spacing */
   --radius-sm: 6px;
@@ -50,12 +54,12 @@
   --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --font-arabic: 'Amiri', serif;
 
-  /* Focus ring */
-  --focus-ring: 0 0 0 3px rgba(255, 111, 97, 0.55);
+  /* Focus ring — white inner ring so it also shows on the dark header */
+  --focus-ring: 0 0 0 2px #ffffff, 0 0 0 5px #b45f17;
 }
 
 @media (prefers-contrast: more) {
   :root {
-    --border-subtle: #8c7fae;
+    --border-subtle: #6a8b95;
   }
 }

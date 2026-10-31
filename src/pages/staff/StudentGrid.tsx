@@ -39,7 +39,7 @@ export default function StudentGrid() {
 
   async function goToNextStudent() {
     if (!session) return
-    const list = await staffSearchStudents(session.token, '')
+    const list = await staffSearchStudents(session.token, student.course_id, '')
     const idx = list.findIndex((s) => s.id === student.id)
     const next = list[(idx + 1) % list.length]
     if (next) navigate(`/staff/student/${next.id}`)
@@ -52,7 +52,9 @@ export default function StudentGrid() {
           <h2 className="mt-0">
             {student.first_name} {student.last_name}
           </h2>
-          <p className="muted">{student.student_code}</p>
+          <p className="muted">
+            {student.student_code} · {bundle.course.name}
+          </p>
         </div>
         <button className="btn btn-primary" onClick={() => setEditingWeek(currentWeek)}>
           Fill week {currentWeek}

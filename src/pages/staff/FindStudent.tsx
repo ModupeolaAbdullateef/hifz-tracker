@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { staffSearchStudents } from '../../lib/api'
 import { useAuth } from '../../context/AuthContext'
+import { useCourse } from '../../context/CourseContext'
 import type { StudentFull } from '../../lib/types'
 
 export default function FindStudent() {
   const { session } = useAuth()
+  const { course } = useCourse()
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<StudentFull[]>([])
@@ -13,21 +15,21 @@ export default function FindStudent() {
 
   useEffect(() => {
     window.clearTimeout(debounceRef.current)
-    if (!session) return
+    if (!session || !course) return
     debounceRef.current = window.setTimeout(async () => {
       try {
-        const rows = await staffSearchStudents(session.token, query.trim())
+        const rows = await staffSearchStudents(session.token, course.id, query.trim())
         setResults(rows)
       } catch {
         setResults([])
       }
     }, 200)
     return () => window.clearTimeout(debounceRef.current)
-  }, [query, session])
+  }, [query, session, course])
 
   return (
     <div className="card">
-      <h2>Find a student</h2>
+      <h2>Find a student{course && <span className="muted"> in {course.name}</span>}</h2>
       <div className="field">
         <label htmlFor="staff-search">Student name</label>
         <input

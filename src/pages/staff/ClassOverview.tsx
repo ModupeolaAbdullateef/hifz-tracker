@@ -3,29 +3,32 @@ import { useNavigate } from 'react-router-dom'
 import { ErrorBanner, LoadingState } from '../../components/LoadingAndEmpty'
 import { getClassOverview } from '../../lib/api'
 import { useAuth } from '../../context/AuthContext'
+import { useCourse } from '../../context/CourseContext'
 import type { ClassOverviewRow } from '../../lib/types'
 
 export default function ClassOverview() {
   const { session } = useAuth()
+  const { course } = useCourse()
   const navigate = useNavigate()
   const [rows, setRows] = useState<ClassOverviewRow[]>([])
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!session) return
-    getClassOverview(session.token)
+    if (!session || !course) return
+    setLoading(true)
+    getClassOverview(session.token, course.id)
       .then(setRows)
       .catch((e) => setError(e instanceof Error ? e.message : 'Could not load the class overview.'))
       .finally(() => setLoading(false))
-  }, [session])
+  }, [session, course])
 
   if (loading) return <LoadingState />
   if (error) return <ErrorBanner text={error} />
 
   return (
     <div className="card">
-      <h2 className="mt-0">Class overview</h2>
+      <h2 className="mt-0">Class overview{course && <span className="muted"> · {course.name}</span>}</h2>
       <div className="data-table-wrap">
         <table className="data-table">
           <thead>

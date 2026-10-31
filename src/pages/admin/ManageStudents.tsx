@@ -1,26 +1,42 @@
 import { useEffect, useState } from 'react'
 import AdminGuard from '../../components/AdminGuard'
-import { ErrorBanner, LoadingState, SuccessBanner } from '../../components/LoadingAndEmpty'
-import { deactivateStudent, getAllStudentsAdmin, regenerateStudentCode, upsertStudent } from '../../lib/api'
+import { EmptyState, ErrorBanner, LoadingState, SuccessBanner } from '../../components/LoadingAndEmpty'
+import {
+  deactivateStudent,
+  deleteStudent,
+  getAllStudentsAdmin,
+  regenerateStudentCode,
+  upsertStudent,
+} from '../../lib/api'
 import { useAuth } from '../../context/AuthContext'
+import { useCourse } from '../../context/CourseContext'
 import type { StudentFull } from '../../lib/types'
 
-const emptyForm = { id: undefined as string | undefined, firstName: '', lastName: '', joinWeek: 1, targetPages: '' }
+const emptyForm = {
+  id: undefined as string | undefined,
+  courseId: null as number | null,
+  firstName: '',
+  lastName: '',
+  joinWeek: 1,
+  targetPages: '',
+}
 
 export default function ManageStudents() {
   const { session } = useAuth()
+  const { course, courses, refresh: refreshCourses } = useCourse()
   const [students, setStudents] = useState<StudentFull[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [revealedCode, setRevealedCode] = useState<{ id: string; code: string } | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
 
   async function load() {
-    if (!session) return
+    if (!session || !course) return
     setLoading(true)
     try {
-      const rows = await getAllStudentsAdmin(session.token)
+      const rows = await getAllStudentsAdmin(session.token, course.id)
       setStudents(rows)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not load students.')
@@ -30,26 +46,35 @@ export default function ManageStudents() {
   }
 
   useEffect(() => {
+    setForm(emptyForm)
+    setConfirmDelete(null)
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session])
+  }, [session, course?.id])
+
+  if (!course) return <EmptyState text="Add a course on the Courses tab before adding students." />
+
+  const formCourseId = form.courseId ?? course.id
+  const formCourse = courses.find((c) => c.id === formCourseId) ?? course
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!session) return
+    if (!session || !course) return
     setError(null)
     setMessage(null)
     try {
       const result = await upsertStudent(session.token, {
         id: form.id,
+        courseId: formCourseId,
         firstName: form.firstName.trim(),
         lastName: form.lastName.trim(),
         joinWeek: form.joinWeek,
         targetPages: form.targetPages === '' ? null : Number(form.targetPages),
       })
-      setMessage(form.id ? 'Student updated.' : `Student added — code ${result.student_code}.`)
+      const movedTo = formCourseId !== course.id ? ` and moved to ${formCourse.name}` : ''
+      setMessage(form.id ? `Student updated${movedTo}.` : `Student added to ${formCourse.name} — code ${result.student_code}.`)
       setForm(emptyForm)
-      await load()
+      await Promise.all([load(), refreshCourses()])
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not save this student.')
     }
@@ -58,6 +83,7 @@ export default function ManageStudents() {
   function editStudent(s: StudentFull) {
     setForm({
       id: s.id,
+      courseId: s.course_id,
       firstName: s.first_name,
       lastName: s.last_name,
       joinWeek: s.join_week,
@@ -68,7 +94,22 @@ export default function ManageStudents() {
   async function toggleActive(s: StudentFull) {
     if (!session) return
     await deactivateStudent(session.token, s.id, !s.active)
-    await load()
+    await Promise.all([load(), refreshCourses()])
+  }
+
+  async function handleDelete(s: StudentFull) {
+    if (!session) return
+    setError(null)
+    setMessage(null)
+    try {
+      await deleteStudent(session.token, s.id)
+      setConfirmDelete(null)
+      if (form.id === s.id) setForm(emptyForm)
+      setMessage(`${s.first_name} ${s.last_name} deleted.`)
+      await Promise.all([load(), refreshCourses()])
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not delete this student.')
+    }
   }
 
   async function handleRegenerate(s: StudentFull) {
@@ -81,8 +122,27 @@ export default function ManageStudents() {
   return (
     <AdminGuard>
       <div className="card">
-        <h2 className="mt-0">{form.id ? 'Edit student' : 'Add student'}</h2>
+        <h2 className="mt-0">{form.id ? 'Edit student' : `Add student to ${course.name}`}</h2>
         <form onSubmit={handleSubmit}>
+          {form.id && courses.length > 1 && (
+            <div className="field">
+              <label htmlFor="studentCourse">Course</label>
+              <select
+                id="studentCourse"
+                value={formCourseId}
+                onChange={(e) => setForm((f) => ({ ...f, courseId: Number(e.target.value) }))}
+              >
+                {courses.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <p className="field-hint">
+                Moving a student keeps their weekly records, matched by week number.
+              </p>
+            </div>
+          )}
           <div className="flex gap-3 flex-wrap">
             <div className="field" style={{ flex: 1 }}>
               <label htmlFor="firstName">First name</label>
@@ -110,7 +170,7 @@ export default function ManageStudents() {
                 id="joinWeek"
                 type="number"
                 min={1}
-                max={10}
+                max={formCourse.weeks}
                 value={form.joinWeek}
                 onChange={(e) => setForm((f) => ({ ...f, joinWeek: Number(e.target.value) }))}
               />
@@ -142,9 +202,11 @@ export default function ManageStudents() {
       </div>
 
       <div className="card">
-        <h2 className="mt-0">Students</h2>
+        <h2 className="mt-0">Students in {course.name}</h2>
         {loading ? (
           <LoadingState />
+        ) : students.length === 0 ? (
+          <EmptyState text="No students in this course yet." />
         ) : (
           <div className="data-table-wrap">
             <table className="data-table">
@@ -179,7 +241,27 @@ export default function ManageStudents() {
                         <button className="btn btn-ghost btn-sm" onClick={() => toggleActive(s)}>
                           {s.active ? 'Deactivate' : 'Reactivate'}
                         </button>
+                        {confirmDelete === s.id ? (
+                          <>
+                            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(s)}>
+                              Delete for good
+                            </button>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDelete(null)}>
+                              Keep
+                            </button>
+                          </>
+                        ) : (
+                          <button className="btn btn-ghost btn-sm" onClick={() => setConfirmDelete(s.id)}>
+                            Delete
+                          </button>
+                        )}
                       </div>
+                      {confirmDelete === s.id && (
+                        <p className="field-hint">
+                          This also deletes all of {s.first_name}'s weekly records and badges. Deactivate instead
+                          to keep their history.
+                        </p>
+                      )}
                     </td>
                   </tr>
                 ))}

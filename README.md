@@ -12,10 +12,12 @@ hosted on GitHub Pages via GitHub Actions.
 1. Go to the site and click the **Staff / Admin login** tab.
 2. Enter your name and the **teacher access code** (ask the admin if you don't
    have it).
-3. **Find student**: search a student by name, tap their name, then tap
+3. If there's more than one course, choose yours from the **Course** menu
+   at the top — every staff tab then shows only that course.
+   **Find student**: search a student by name, tap their name, then tap
    **Fill week N** (or tap any week column in their grid) to open the entry
    panel.
-4. **This Thursday**: pick a week (defaults to the current one) to see the
+4. **This week**: pick a week (defaults to the current one) to see the
    whole class with who's done/not done. Tap a name to fill it in; use
    **Save & next student** to move through the list quickly.
 5. In the entry panel: toggle **Present/Absent** (absent hides the other
@@ -49,13 +51,17 @@ code** instead of the teacher code.
   first. Mark each one contacted or archived, or delete it. Set the admin
   email that gets notified of each new enquiry at the top of the tab (see
   "Enquiry emails" below for the one-time setup).
-- **Students**: add a student (a code like `HZ-4821` is generated
-  automatically), edit their name/join week/target, deactivate or reactivate
-  them, or generate a new code if one is lost.
-- **Course**: change the course name, start date, number of weeks, or default
-  target; mark a week as cancelled (e.g. for a holiday) — this doesn't delete
-  any existing records.
-- **Fields**: rename a field's label, change its type (number / yes-no),
+- **Students**: add a student to the selected course (a code like `HZ-4821`
+  is generated automatically), edit their name/join week/target, move them
+  to another course, deactivate or reactivate them, generate a new code if
+  one is lost, or **delete** them for good (this also deletes their weekly
+  records and badges — deactivate instead to keep their history).
+- **Courses**: add a new course (it can copy another course's record
+  fields), archive or reactivate one, or delete an empty one. For the
+  selected course, change its name, start date, number of weeks, or default
+  target, and mark a week as cancelled (e.g. for a holiday) — this doesn't
+  delete any existing records.
+- **Fields** (per course): rename a field's label, change its type (number / yes-no),
   reorder fields, or deactivate one. Existing recorded data is never deleted
   when a field is renamed or deactivated.
 - **Tips**: add, edit, reorder, or deactivate the tips shown on the student

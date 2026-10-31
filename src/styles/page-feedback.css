@@ -15,8 +15,8 @@
   border: none;
   border-radius: 999px;
   padding: 0.6rem 1rem;
-  background: var(--accent-coral);
-  color: var(--brand-white);
+  background: var(--accent);
+  color: var(--brand-ink);
   font-weight: 600;
   box-shadow: var(--shadow-pop);
   cursor: pointer;
@@ -24,7 +24,7 @@
 
 .pf__count {
   background: var(--brand-white);
-  color: var(--accent-coral-deep);
+  color: var(--accent-deep);
   border-radius: 999px;
   padding: 0 0.45rem;
   font-size: 0.8rem;
@@ -35,7 +35,7 @@
   max-height: min(480px, calc(100vh - 2 * var(--space-4)));
   overflow-y: auto;
   background: var(--brand-white);
-  border: 2px solid var(--accent-coral);
+  border: 2px solid var(--accent);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-pop);
   padding: var(--space-3);
@@ -79,7 +79,7 @@
 }
 
 .pf__item {
-  background: var(--accent-coral-light);
+  background: var(--accent-light);
   border-radius: var(--radius-sm);
   padding: var(--space-2) var(--space-3);
   margin-bottom: var(--space-2);
@@ -101,7 +101,7 @@
 .pf__delete {
   border: none;
   background: transparent;
-  color: var(--accent-coral-deep);
+  color: var(--accent-deep);
   font-size: 0.75rem;
   cursor: pointer;
   text-decoration: underline;

@@ -29,21 +29,30 @@ export interface CourseWeek {
 }
 
 export interface Course {
+  id: number
   name: string
   start_date: string
   weeks: number
   class_weekday: number
   target_pages: number | null
+  active: boolean
+}
+
+/** A course as listed in the staff course picker. */
+export interface CourseSummary extends Course {
+  student_count: number
 }
 
 export interface StudentPublic {
   id: string
   first_name: string
   last_initial: string
+  course_name: string
 }
 
 export interface StudentFull {
   id: string
+  course_id: number
   first_name: string
   last_name: string
   student_code: string

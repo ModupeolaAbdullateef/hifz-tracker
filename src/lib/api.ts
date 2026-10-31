@@ -1,7 +1,7 @@
 import { supabase } from './supabase'
 import type {
   ClassOverviewRow,
-  Course,
+  CourseSummary,
   CourseWeek,
   InterestFor,
   InterestStatus,
@@ -39,8 +39,10 @@ export const staffLogout = (token: string) => call<void>('staff_logout', { p_tok
 
 // ---------- Teacher ----------
 
-export const staffSearchStudents = (token: string, q: string) =>
-  call<StudentFull[]>('staff_search_students', { p_token: token, p_q: q })
+export const listCourses = (token: string) => call<CourseSummary[]>('list_courses', { p_token: token })
+
+export const staffSearchStudents = (token: string, courseId: number, q: string) =>
+  call<StudentFull[]>('staff_search_students', { p_token: token, p_course_id: courseId, p_q: q })
 
 export const getStudentGrid = (token: string, studentId: string) =>
   call<StudentRecordBundle>('get_student_grid', { p_token: token, p_student_id: studentId })
@@ -67,15 +69,20 @@ export const saveWeeklyRecord = (token: string, args: SaveWeeklyRecordArgs) =>
     p_next_assignment: args.nextAssignment,
   })
 
-export const getWeekRoster = (token: string, weekNumber: number) =>
-  call<WeekRosterRow[]>('get_week_roster', { p_token: token, p_week_number: weekNumber })
+export const getWeekRoster = (token: string, courseId: number, weekNumber: number) =>
+  call<WeekRosterRow[]>('get_week_roster', { p_token: token, p_course_id: courseId, p_week_number: weekNumber })
 
-export const getClassOverview = (token: string) => call<ClassOverviewRow[]>('get_class_overview', { p_token: token })
+export const getClassOverview = (token: string, courseId: number) =>
+  call<ClassOverviewRow[]>('get_class_overview', { p_token: token, p_course_id: courseId })
+
+export const getCourseWeeks = (token: string, courseId: number) =>
+  call<CourseWeek[]>('get_course_weeks', { p_token: token, p_course_id: courseId })
 
 // ---------- Admin ----------
 
 export interface UpsertStudentArgs {
   id?: string
+  courseId: number
   firstName: string
   lastName: string
   joinWeek: number
@@ -86,6 +93,7 @@ export const upsertStudent = (token: string, args: UpsertStudentArgs) =>
   call<{ id: string; student_code: string }>('upsert_student', {
     p_token: token,
     p_id: args.id ?? null,
+    p_course_id: args.courseId,
     p_first_name: args.firstName,
     p_last_name: args.lastName,
     p_join_week: args.joinWeek,
@@ -95,30 +103,70 @@ export const upsertStudent = (token: string, args: UpsertStudentArgs) =>
 export const deactivateStudent = (token: string, studentId: string, active: boolean) =>
   call<void>('deactivate_student', { p_token: token, p_student_id: studentId, p_active: active })
 
+/** Permanently deletes a student along with their weekly records and badges. */
+export const deleteStudent = (token: string, studentId: string) =>
+  call<void>('delete_student', { p_token: token, p_student_id: studentId })
+
 export const regenerateStudentCode = (token: string, studentId: string) =>
   call<{ student_code: string }>('regenerate_student_code', { p_token: token, p_student_id: studentId })
 
-export const updateCourse = (
-  token: string,
-  args: { name: string; startDate: string; weeks: number; targetPages: number | null },
-) =>
+export interface CourseArgs {
+  name: string
+  startDate: string
+  weeks: number
+  targetPages: number | null
+}
+
+export const createCourse = (token: string, args: CourseArgs & { copyFieldsFrom: number | null }) =>
+  call<number>('create_course', {
+    p_token: token,
+    p_name: args.name,
+    p_start_date: args.startDate,
+    p_weeks: args.weeks,
+    p_target_pages: args.targetPages,
+    p_copy_fields_from: args.copyFieldsFrom,
+  })
+
+export const updateCourse = (token: string, courseId: number, args: CourseArgs) =>
   call<void>('update_course', {
     p_token: token,
+    p_course_id: courseId,
     p_name: args.name,
     p_start_date: args.startDate,
     p_weeks: args.weeks,
     p_target_pages: args.targetPages,
   })
 
-export const setWeekCancelled = (token: string, weekNumber: number, cancelled: boolean, note: string | null) =>
-  call<void>('set_week_cancelled', { p_token: token, p_week_number: weekNumber, p_cancelled: cancelled, p_note: note })
+export const setCourseActive = (token: string, courseId: number, active: boolean) =>
+  call<void>('set_course_active', { p_token: token, p_course_id: courseId, p_active: active })
+
+/** Only succeeds for a course with no students. */
+export const deleteCourse = (token: string, courseId: number) =>
+  call<void>('delete_course', { p_token: token, p_course_id: courseId })
+
+export const setWeekCancelled = (
+  token: string,
+  courseId: number,
+  weekNumber: number,
+  cancelled: boolean,
+  note: string | null,
+) =>
+  call<void>('set_week_cancelled', {
+    p_token: token,
+    p_course_id: courseId,
+    p_week_number: weekNumber,
+    p_cancelled: cancelled,
+    p_note: note,
+  })
 
 export const upsertRecordField = (
   token: string,
+  courseId: number,
   args: { key: string; label: string; type: 'number' | 'yesno'; unit: string | null; sortOrder: number; active: boolean },
 ) =>
   call<void>('upsert_record_field', {
     p_token: token,
+    p_course_id: courseId,
     p_key: args.key,
     p_label: args.label,
     p_type: args.type,
@@ -145,17 +193,16 @@ export const deleteTip = (token: string, id: string) => call<void>('delete_tip',
 export const setCodes = (token: string, newTeacherCode: string | null, newAdminCode: string | null) =>
   call<void>('set_codes', { p_token: token, p_new_teacher_code: newTeacherCode, p_new_admin_code: newAdminCode })
 
-export const exportClass = (token: string) => call<Record<string, unknown>[]>('export_class', { p_token: token })
+export const exportClass = (token: string, courseId: number) =>
+  call<Record<string, unknown>[]>('export_class', { p_token: token, p_course_id: courseId })
 
-export const getAllStudentsAdmin = (token: string) => call<StudentFull[]>('admin_list_students', { p_token: token })
+export const getAllStudentsAdmin = (token: string, courseId: number) =>
+  call<StudentFull[]>('admin_list_students', { p_token: token, p_course_id: courseId })
 
 export const getAllTipsAdmin = (token: string) => call<Tip[]>('admin_list_tips', { p_token: token })
 
-export const getRecordFieldsAdmin = (token: string) => call<RecordField[]>('get_record_fields', { p_token: token })
-
-export const getCourseWeeksAdmin = (token: string) => call<CourseWeek[]>('get_course_weeks', { p_token: token })
-
-export const getCourseAdmin = (token: string) => call<Course>('get_course', { p_token: token })
+export const getRecordFieldsAdmin = (token: string, courseId: number) =>
+  call<RecordField[]>('get_record_fields', { p_token: token, p_course_id: courseId })
 
 export const getResourcesAdmin = (token: string) => call<Resource[]>('admin_list_resources', { p_token: token })
 

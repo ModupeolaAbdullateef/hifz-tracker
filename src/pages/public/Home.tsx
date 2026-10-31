@@ -34,7 +34,7 @@ export default function Home() {
           <h2 className="hero__title">{HERO.title}</h2>
           <p className="hero__subtitle">{HERO.subtitle}</p>
           <div className="hero__actions">
-            <button type="button" className="btn btn-coral" onClick={scrollToForm}>
+            <button type="button" className="btn btn-accent" onClick={scrollToForm}>
               Register interest
             </button>
             <Link to="/record" className="btn btn-hero-ghost">
