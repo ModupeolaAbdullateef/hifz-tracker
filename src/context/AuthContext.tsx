@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { supabase } from '../lib/supabase'
+import type { LoginResult } from '../hifdh/api'
 import { SESSION_EXPIRED_EVENT, staffLogout } from '../lib/api'
 import { clearStaffSession, loadStaffSession, saveStaffSession } from '../lib/session'
 import type { StaffSession } from '../lib/types'
@@ -7,7 +7,7 @@ import type { StaffSession } from '../lib/types'
 interface AuthContextValue {
   session: StaffSession | null
   isAdmin: boolean
-  login: (displayName: string, code: string) => Promise<void>
+  login: (result: LoginResult) => void
   logout: () => Promise<void>
 }
 
@@ -16,18 +16,16 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<StaffSession | null>(() => loadStaffSession())
 
-  const login = useCallback(async (displayName: string, code: string) => {
-    const { data, error } = await supabase.rpc('staff_login', {
-      p_display_name: displayName,
-      p_code: code,
-    })
-    if (error) throw new Error(error.message)
-    if (!data || !data.token) throw new Error('Incorrect name or access code.')
+  /** Stores the session returned by the Hifdh Portal login (code, then pick your name). */
+  const login = useCallback((result: LoginResult) => {
     const newSession: StaffSession = {
-      token: data.token,
-      role: data.role,
-      display_name: displayName,
-      expires_at: data.expires_at,
+      token: result.token,
+      role: result.role,
+      display_name: result.display_name,
+      expires_at: result.expires_at,
+      group_id: result.group_id,
+      initials: result.initials,
+      teacher_id: result.teacher_id,
     }
     saveStaffSession(newSession)
     setSession(newSession)

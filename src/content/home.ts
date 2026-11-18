@@ -6,11 +6,11 @@ export const HERO = {
   eyebrow: 'Thursdays · 10 weeks',
   title: 'Memorise the Qur’an, one Thursday at a time',
   subtitle:
-    'A friendly, structured 10-week Hifz class for children and adults. Weekly one-to-one recitation, clear targets, and a progress record you and your family can follow online.',
+    'A friendly, structured 10-week Hifdh class for children and adults. Weekly one-to-one recitation, clear targets, and a progress record you and your family can follow online.',
 }
 
 export const HIGHLIGHTS = [
-  { icon: '📖', title: 'Weekly recitation', text: 'Recite your new and old Hifz to a teacher every Thursday.' },
+  { icon: '📖', title: 'Weekly recitation', text: 'Recite your new and old Hifdh to a teacher every Thursday.' },
   { icon: '🎯', title: 'Clear targets', text: 'Set a personal page target and see your progress ring fill up.' },
   { icon: '🏅', title: 'Badges & certificate', text: 'Earn badges along the way and a certificate at the end.' },
   { icon: '👪', title: 'Family can follow', text: 'Parents can check the weekly record with the student code.' },
@@ -46,7 +46,7 @@ export const STRUCTURE: WeekPlan[] = [
   {
     weeks: 'Weeks 7–9',
     title: 'Momentum & consolidation',
-    text: 'Increase new Hifz where possible while keeping revision strong so nothing is forgotten.',
+    text: 'Increase new Hifdh where possible while keeping revision strong so nothing is forgotten.',
   },
   {
     weeks: 'Week 10',
@@ -81,8 +81,8 @@ export const STORIES: Story[] = [
     name: 'Ibrahim, adult learner',
     role: 'Student',
     quote:
-      'I always wanted to start Hifz but didn’t know how. The structure and the weekly check-in gave me the accountability I needed.',
-    stat: '12 pages of new Hifz',
+      'I always wanted to start Hifdh but didn’t know how. The structure and the weekly check-in gave me the accountability I needed.',
+    stat: '12 pages of new Hifdh',
   },
 ]
 

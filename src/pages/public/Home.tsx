@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import SiteHeader from '../../components/SiteHeader'
 import TipsMarquee from '../../components/TipsMarquee'
 import PublicNav from '../../components/PublicNav'
 import InterestForm from '../../components/InterestForm'
-import RecordLookup from '../../components/RecordLookup'
 import SiteFooter from '../../components/SiteFooter'
 import { getActiveTips } from '../../lib/api'
 import { GALLERY, HERO, HIGHLIGHTS, STORIES, STRUCTURE } from '../../content/home'
@@ -51,7 +51,16 @@ export default function Home() {
         </section>
 
         <section className="home-section home-lookup" ref={lookupRef}>
-          <RecordLookup title="Parents & students: view a record" />
+          <div className="card">
+            <h2 className="mt-0">Students: view your record</h2>
+            <p>
+              Open the <strong>personal link</strong> your teacher sent you and enter your 4-digit PIN. You'll see this week's targets, your
+              10-week record, your revision partner and your progress.
+            </p>
+            <p className="muted">
+              Teachers: <Link to="/staff/login">Staff login</Link>
+            </p>
+          </div>
         </section>
 
         <section className="home-section">

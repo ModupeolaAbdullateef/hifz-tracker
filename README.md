@@ -1,158 +1,83 @@
-# Hifz Progress Tracker
+# Hifdh Portal
 
-A mobile-first web app that replaces the weekly Excel sheet for a 10-week
-Hifz class. Teachers log a student's weekly progress; students and parents
-look up progress with a student code; an admin manages the class.
+A mobile-first web portal that replaces the Brothers and Sisters Excel record
+sheets for the Hifdh class. Teachers record the whole class from a phone,
+students see their own up-to-date record from a personal link, and every
+Excel rule (carry-over, status, colours, juz tests, attendance) runs
+automatically.
 
-Built with Vite + React + TypeScript, Supabase (Postgres + RPC functions), and
-hosted on GitHub Pages via GitHub Actions.
+Built with Vite + React + TypeScript and Supabase (Postgres + RPC functions),
+hosted on GitHub Pages via GitHub Actions. The specification is
+“Hifdh Portal - User Stories for the Developer”.
+
+## Roles
+
+| Role | How they log in | What they see |
+| --- | --- | --- |
+| Admin | Admin code, then pick or type their name and initials | Both groups, every page |
+| Teacher | Their group's code (Brothers or Sisters), then pick their name | Their own group only |
+| Student | Personal link + 4-digit PIN | Only their own record and their partner's name |
+
+Staff stay logged in on a device for 12 hours.
 
 ## For teachers
 
-1. Go to the site and click the **Staff / Admin login** tab.
-2. Enter your name and the **teacher access code** (ask the admin if you don't
-   have it).
-3. If there's more than one course, choose yours from the **Course** menu
-   at the top — every staff tab then shows only that course.
-   **Find student**: search a student by name, tap their name, then tap
-   **Fill week N** (or tap any week column in their grid) to open the entry
-   panel.
-4. **This week**: pick a week (defaults to the current one) to see the
-   whole class with who's done/not done. Tap a name to fill it in; use
-   **Save & next student** to move through the list quickly.
-5. In the entry panel: toggle **Present/Absent** (absent hides the other
-   fields and marks the week red), fill in New Hifz / Old Hifz / Revision /
-   Tajweed, toggle **Good week** if it was a strong week (marks it green),
-   and add a note or next assignment if useful. Optionally enter the
-   **New hifz pages** (mushaf page numbers, e.g. 402 to 404). If New Hifz is
-   still empty, it's filled in with the page count.
-6. **Quran memorisation**: each student's page shows a juz-by-juz map of
-   everything they've memorised (standard 604-page Madani mushaf). When a
-   student joins, tap **Edit hifz before joining** and mark what they
-   already know (a page range, whole juz, surahs or single pages). After
-   that, the map updates on its own from the weekly page ranges.
-7. **Class overview** shows totals, attendance %, and an on-track/behind
-   indicator for every student.
-8. Sessions last 12 hours, then you'll need to log in again.
+- **Record**: today's week opens by default. Tap a name to open their lines,
+  then tap **Y**, **N** or **Absent**, or type a number for part done. **Absent**
+  next to the name marks every line Absent in one tap. Your initials go on each
+  result automatically; change them in the Initials box if someone else tested.
+  Results save straight away and, with no signal, are queued and sent when
+  you're back online (the “waiting to sync” badge shows how many).
+- **Overview**: one row per student with weeks 1–10, Total memorised, Expected
+  by now, Total projected, Status, Weeks absent and Attendance. Tap a name to
+  see their lines. **Print** gives a one-page copy with name lines only.
+- **This week**: Behind, Absent, Revision not done, Juz tests due, Test results.
+- **Student page**: type targets for each week, fill a whole line at once,
+  type over the gold “Revise this week” suggestion (or reset it), and add
+  dated notes. Enter a juz only in the week it changes. Write “Juz 29 Test”
+  in a week to schedule a test, then mark Pass, Fail or Redo.
+- **Reminders**: each student's targets for the week, ready to send on WhatsApp.
 
-## For students and parents
+## For the admin
 
-1. Go to the site, open the **My Record** tab, type the student's first name,
-   pick the right name, then enter the **student code** given by the teacher
-   (e.g. `HZ-4821`).
-2. The progress page shows the weekly grid, totals, a progress ring against
-   the target (if one is set), a chart of New Hifz per week, all the
-   teacher notes and next assignments (newest first, each signed with the
-   name of the teacher who wrote it), any badges earned, and a **Quran
-   memorisation** map showing how much of each juz they've memorised
-   (switch to **Whole** to see every page).
-3. After week 10 (or once the target is reached), a **certificate** becomes
-   available to view and print.
-4. The **Useful Docs** tab (next to "My Record") lists induction material and
-   other documents the admin has uploaded — tap **Open** to view/download.
+- **Import**: upload “Record sheets - Brothers.xlsx” / “Sisters.xlsx”. The
+  preview shows counts, unreadable rows, and any student whose portal totals
+  differ from Excel's own (columns P–V) before anything is saved.
+- **Terms**: create a 10-week term (optionally copying every student's lines
+  from the last term), move or cancel a week, move old terms to history.
+- **Students**: add (with line templates), rename (the link stays the same),
+  mark as left (removed from pairs, record kept), archive, new PIN, export or
+  permanently delete a student's data (UK GDPR).
+- **Registration**: who's registered this term and who has paid.
+- **Partners**: pairs or threes; duplicates are shown in red; printable cards.
+- **Teachers**, **Codes**, **Audit** (every change, with undo), **Export**
+  (Excel, or PDF via Print), plus Tips, Docs and Enquiries.
 
-## For the admin (lead teacher)
+## The rules
 
-Admin tabs appear automatically after logging in with the **admin access
-code** instead of the teacher code.
+All of section 7 lives in `src/hifdh/rules.ts`, with automated tests in
+`src/hifdh/rules.test.ts` (`npm test`). The deploy runs the tests first and
+stops if any fail.
 
-- **Enquiries**: everyone who filled in the homepage interest form, newest
-  first. Mark each one contacted or archived, or delete it. Set the admin
-  email that gets notified of each new enquiry at the top of the tab (see
-  "Enquiry emails" below for the one-time setup).
-- **Students**: add a student to the selected course (a code like `HZ-4821`
-  is generated automatically), edit their name/join week/target, move them
-  to another course, deactivate or reactivate them, generate a new code if
-  one is lost, or **delete** them for good (this also deletes their weekly
-  records and badges — deactivate instead to keep their history).
-- **Courses**: add a new course (it can copy another course's record
-  fields), archive or reactivate one, or delete an empty one. For the
-  selected course, change its name, start date, number of weeks, or default
-  target, and mark a week as cancelled (e.g. for a holiday) — this doesn't
-  delete any existing records.
-- **Fields** (per course): rename a field's label, change its type (number / yes-no),
-  reorder fields, or deactivate one. Existing recorded data is never deleted
-  when a field is renamed or deactivated.
-- **Tips**: add, edit, reorder, or deactivate the tips shown on the student
-  pages' scrolling banner. Category `announcement` is styled differently to
-  stand out.
-- **Codes**: change the teacher and/or admin access code at any time. Leave a
-  field blank to keep it unchanged. Existing logged-in sessions stay valid
-  until they expire (up to 12 hours) — this is intentional so no one gets
-  logged out mid-class.
-- **Docs**: upload documents (PDF, Word, image, or text, up to 20 MB) with a
-  title and optional description. They appear immediately on the public
-  Useful Docs tab. Deactivate to hide one without deleting it, or delete it
-  outright (this also removes the underlying file from storage).
-- **Export**: download a CSV with one row per student per week and one
-  column per field, for backup or reporting.
+## Setup
 
-### Editing the homepage
+1. In the Supabase SQL editor, run `supabase/setup.sql`, then
+   `supabase/hifdh.sql`. Both are safe to run again.
+2. If this is a brand-new database, set the first codes once (see the bottom
+   of `setup.sql`). Both groups start with the existing teacher code; give each
+   group its own on the **Codes** page.
+3. Copy `.env.example` to `.env` with the Supabase URL and anon key.
+4. `npm install`, then `npm run dev`. `npm test` runs the rule tests.
 
-All homepage text (hero, 10-week structure, success stories, gallery
-captions) lives in `src/content/home.ts`. The success stories are
-placeholders — replace them with real ones before going live. To add a
-gallery photo, put the image in `public/gallery/` and set
-`src: './gallery/your-photo.jpg'` on that item.
+Deploys happen automatically on every push to `main` (the `VITE_SUPABASE_URL`
+and `VITE_SUPABASE_ANON_KEY` repository secrets must be set).
 
-### Enquiry emails
+## Security
 
-Enquiries are always saved and shown on the Enquiries tab. To also get an
-email for each one:
-
-1. Create a free account at [resend.com](https://resend.com) and create an
-   API key.
-2. In the Supabase SQL Editor run
-   `select vault.create_secret('re_YOUR_KEY', 'resend_api_key');`
-3. On the admin **Enquiries** tab, set the notification email. Until you
-   verify your own domain in Resend, this must be the same address you
-   signed up to Resend with.
-
-### Changing the brand colours or fonts
-
-All colours live in `src/styles/theme.css` as CSS custom properties
-(`--brand-primary`, `--brand-secondary`, `--accent-coral`, `--status-absent`,
-`--status-good`, etc.) — edit the values there, commit, and push, and the
-next deploy picks them up automatically everywhere (buttons, header, badges,
-nav all reference the same tokens). Headings use `--font-display` (Playfair
-Display) and body text uses `--font-ui` (Inter); swap the Google Fonts
-import in `index.html` if either should change.
-
-## Database / security model
-
-- Every table has Row Level Security enabled with **no policies for the
-  anon role** — the browser's anon key cannot read or write any table
-  directly (verified in testing: direct REST queries return
-  `permission denied`).
-- All reads and writes go through Postgres functions
-  (`supabase/setup.sql`), each `SECURITY DEFINER` with an explicit
-  `search_path`, callable only via `supabase.rpc(...)`.
-- Teacher and admin actions are gated by a session token (checked for role
-  and expiry on every call) rather than by a separate Postgres role, since
-  the browser only ever has the anon key.
-- Login codes are stored hashed (`pgcrypto`), never in plain text.
-- Failed login/code attempts are rate-limited (10 failures / 15 minutes).
-- The Useful Docs storage bucket is public for *downloads* (the files are
-  meant to be freely viewable), but *uploads/deletes* are gated by a
-  storage RLS policy that checks an `x-admin-token` header against the same
-  `auth_sessions` table every RPC checks — verified in testing: an upload
-  without a valid admin token is rejected with "row-level security policy"
-  denied, even with a forged token.
-
-To change the initial codes or re-apply schema changes, edit and re-run
-`supabase/setup.sql` in the Supabase SQL Editor — every statement is
-idempotent and safe to re-run.
-
-## Local development
-
-```bash
-npm install
-cp .env.example .env   # fill in your Supabase project URL + anon key
-npm run dev
-```
-
-## Deployment
-
-Pushing to `main` triggers `.github/workflows/deploy.yml`, which builds the
-app (injecting `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` from the
-repository's Actions secrets) and publishes `dist/` to GitHub Pages.
+- Row Level Security is on for every table with no policies, so the public key
+  can't read tables directly. Everything goes through `SECURITY DEFINER`
+  functions that check a staff session (and its group) or a student's link and
+  PIN.
+- Internal helper functions are explicitly locked so they can't be called with
+  the public key.
+- Failed codes and PINs are rate-limited.

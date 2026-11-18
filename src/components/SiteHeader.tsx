@@ -8,8 +8,8 @@ export default function SiteHeader() {
         <Link to="/" className="site-header__brand">
           <BrandMark />
           <h1 className="site-header__title">
-            Hifz Progress
-            <small className="arabic">تقدم الحفظ</small>
+            Hifdh Portal
+            <small className="arabic">بوابة الحفظ</small>
           </h1>
         </Link>
       </div>

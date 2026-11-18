@@ -120,6 +120,10 @@ export interface StaffSession {
   role: StaffRole
   display_name: string
   expires_at: string
+  /** Hifdh Portal: the teacher's group (null for the admin, who sees both). */
+  group_id?: number | null
+  initials?: string | null
+  teacher_id?: string | null
 }
 
 export interface ClassOverviewRow {

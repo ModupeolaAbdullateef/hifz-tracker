@@ -6,7 +6,7 @@ export default function SiteFooter() {
   const { session } = useAuth()
   return (
     <footer className="site-footer">
-      <span>Hifz Class</span>
+      <span>Hifdh Class</span>
       <span aria-hidden="true"> · </span>
       <Link to="/docs">Useful Docs</Link>
       <span aria-hidden="true"> · </span>

@@ -1,39 +1,52 @@
 :root {
-  /* Brand — "Lagoon & Apricot": deep lagoon teal, soft seafoam, warm apricot.
-     Every text/background pairing below meets WCAG AA (4.5:1 for text,
-     3:1 for borders and the focus ring). Re-check contrast if you change one. */
-  --brand-primary: #1f6f8b;
-  --brand-primary-dark: #154c60;
-  --brand-primary-light: #e3f1f5;
-  --brand-secondary: #8fd3c1;
-  --brand-secondary-light: #e6f7f2;
-  --accent: #f6b36b;
-  --accent-light: #fff1e1;
-  --accent-deep: #9a4a12;
-  --brand-ink: #13303b;
-  --brand-surface: #f6fafb;
-  --brand-surface-alt: #e8f3f5;
+  /* Brand: Darul Ifta Portal style (dark green, gold, light background).
+     Text/background pairings meet WCAG AA. Re-check contrast if you change one. */
+  --brand-primary: #0f3325;
+  --brand-primary-dark: #0a2419;
+  --brand-primary-light: #e4ece7;
+  --brand-secondary: #a9822f;
+  --brand-secondary-light: #f5efe0;
+  --accent: #a9822f;
+  --accent-light: #f7f0df;
+  --accent-deep: #6e5418;
+  --brand-ink: #14261e;
+  --brand-surface: #f4f5f1;
+  --brand-surface-alt: #eaece5;
   --brand-white: #ffffff;
-  --header-gradient: linear-gradient(135deg, #1f7896 0%, #154c60 100%);
-  --brand-shadow-rgb: 21, 76, 96;
+  --header-gradient: linear-gradient(135deg, #0f3325 0%, #174a37 100%);
+  --brand-shadow-rgb: 15, 51, 37;
 
-  /* Status — kept recognisable as red = absent, green = good */
-  --status-absent: #c0323a;
-  --status-absent-bg: #fdecec;
-  --status-good: #5cc08e;
-  --status-good-bg: #e5f5ec;
-  --status-good-text: #1f6a3f;
-  --status-future-bg: #eef4f6;
-  --status-cancelled-bg: #e1e9ec;
+  /* Status: red = absent / not done, green = done */
+  --status-absent: #b3261e;
+  --status-absent-bg: #fbe3e1;
+  --status-good: #3f9a63;
+  --status-good-bg: #def2e4;
+  --status-good-text: #1d5a35;
+  --status-future-bg: #eef0ea;
+  --status-cancelled-bg: #e3e6de;
+
+  /* Hifdh cell colours (section 7.6 of the brief) */
+  --cell-green: #c6efce;
+  --cell-green-text: #006100;
+  --cell-amber: #ffeb9c;
+  --cell-amber-text: #7a5600;
+  --cell-red: #ffc7ce;
+  --cell-red-text: #9c0006;
+  --cell-test-due: #ffd961;
+  --cell-test-pass: #d9aad4;
+  --cell-test-fail: #ffc7ce;
+  --cell-test-fail-text: #9c0006;
+  --cell-gold: #fff2c4;
+  --teacher-green: #1d7a3e;
 
   /* Text */
   --text-primary: var(--brand-ink);
-  --text-muted: #53666d;
+  --text-muted: #55625b;
   --text-on-brand: #ffffff;
 
   /* Borders / shadows */
-  --border-subtle: #d6e6ea;
-  --border-strong: #6a8b95;
+  --border-subtle: #d9ddd3;
+  --border-strong: #6b776f;
   --shadow-card: 0 2px 12px rgba(var(--brand-shadow-rgb), 0.1);
   --shadow-pop: 0 10px 30px rgba(var(--brand-shadow-rgb), 0.22);
 
@@ -50,16 +63,16 @@
   --space-7: 48px;
 
   /* Fonts */
-  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-display: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  --font-ui: Arial, 'Helvetica Neue', Helvetica, sans-serif;
+  --font-display: Arial, 'Helvetica Neue', Helvetica, sans-serif;
   --font-arabic: 'Amiri', serif;
 
   /* Focus ring — white inner ring so it also shows on the dark header */
-  --focus-ring: 0 0 0 2px #ffffff, 0 0 0 5px #b45f17;
+  --focus-ring: 0 0 0 2px #ffffff, 0 0 0 5px #a9822f;
 }
 
 @media (prefers-contrast: more) {
   :root {
-    --border-subtle: #6a8b95;
+    --border-subtle: #6b776f;
   }
 }

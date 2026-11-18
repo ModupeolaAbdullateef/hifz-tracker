@@ -1715,6 +1715,12 @@ from (values
 ) as v(category, text, sort_order)
 where not exists (select 1 from tips t where t.text = v.text);
 
+-- Internal helpers skip the login checks, so nobody may call them directly
+-- (PostgreSQL and Supabase grant EXECUTE on new functions by default).
+revoke execute on function validate_session(uuid, text) from public, anon, authenticated;
+revoke execute on function build_student_bundle(uuid) from public, anon, authenticated;
+revoke execute on function set_initial_codes(text, text) from public, anon, authenticated;
+
 -- ============================================================
 -- EDIT THESE, then run once in the SQL editor to set the
 -- initial teacher and admin access codes:
