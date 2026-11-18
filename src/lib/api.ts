@@ -16,9 +16,17 @@ import type {
   WeekRosterRow,
 } from './types'
 
+/** Fired when the server says the staff login has run out, so the app can ask for the code again. */
+export const SESSION_EXPIRED_EVENT = 'hifz:session-expired'
+
 async function call<T>(fn: string, args?: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.rpc(fn, args)
-  if (error) throw new Error(error.message)
+  if (error) {
+    if (args && 'p_token' in args && /session expired|not signed in/i.test(error.message)) {
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+    }
+    throw new Error(error.message)
+  }
   return data as T
 }
 

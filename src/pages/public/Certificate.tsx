@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { getStudentRecord } from '../../lib/api'
 import { loadStudentSession } from '../../lib/session'
+import { todayLondonISO } from '../../lib/dates'
 import { LoadingState } from '../../components/LoadingAndEmpty'
 import type { StudentRecordBundle } from '../../lib/types'
 
@@ -40,6 +41,15 @@ export default function Certificate() {
   }
 
   const { student, totals, course } = bundle
+  const lastWeek = bundle.weeks[bundle.weeks.length - 1]
+  if (!lastWeek || lastWeek.class_date > todayLondonISO()) {
+    return (
+      <main className="page page--narrow">
+        <p className="muted">The certificate will be ready after the last week of the course.</p>
+        <Link to={`/record/${student.id}`}>Back to progress</Link>
+      </main>
+    )
+  }
   const today = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', dateStyle: 'long' }).format(new Date())
 
   return (

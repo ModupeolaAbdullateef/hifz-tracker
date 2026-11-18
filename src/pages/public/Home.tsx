@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
 import SiteHeader from '../../components/SiteHeader'
 import TipsMarquee from '../../components/TipsMarquee'
 import PublicNav from '../../components/PublicNav'
 import InterestForm from '../../components/InterestForm'
+import RecordLookup from '../../components/RecordLookup'
+import SiteFooter from '../../components/SiteFooter'
 import { getActiveTips } from '../../lib/api'
 import { GALLERY, HERO, HIGHLIGHTS, STORIES, STRUCTURE } from '../../content/home'
 import type { Tip } from '../../lib/types'
@@ -11,6 +12,7 @@ import type { Tip } from '../../lib/types'
 export default function Home() {
   const [tips, setTips] = useState<Tip[]>([])
   const formRef = useRef<HTMLElement>(null)
+  const lookupRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     getActiveTips().then(setTips).catch(() => setTips([]))
@@ -20,6 +22,11 @@ export default function Home() {
   // scroll to the form directly instead.
   function scrollToForm() {
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  function scrollToLookup() {
+    lookupRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    lookupRef.current?.querySelector('input')?.focus({ preventScroll: true })
   }
 
   return (
@@ -37,10 +44,14 @@ export default function Home() {
             <button type="button" className="btn btn-accent" onClick={scrollToForm}>
               Register interest
             </button>
-            <Link to="/record" className="btn btn-hero-ghost">
+            <button type="button" className="btn btn-hero-ghost" onClick={scrollToLookup}>
               Already enrolled? View my record
-            </Link>
+            </button>
           </div>
+        </section>
+
+        <section className="home-section home-lookup" ref={lookupRef}>
+          <RecordLookup title="Parents & students: view a record" />
         </section>
 
         <section className="home-section">
@@ -114,7 +125,7 @@ export default function Home() {
           </div>
         </section>
       </main>
-      <footer className="site-footer">Hifz Class</footer>
+      <SiteFooter />
     </div>
   )
 }

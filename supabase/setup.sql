@@ -1133,7 +1133,13 @@ begin
         'week_number', w.week_number,
         'class_date', to_char(w.class_date, 'DD/MM/YYYY'),
         'status', coalesce(r.status, ''),
-        'good_week', coalesce(r.good_week, false)
+        'good_week', coalesce(r.good_week, false),
+        'cancelled', w.cancelled,
+        'hifz_from_page', r.hifz_from_page,
+        'hifz_to_page', r.hifz_to_page,
+        'note', r.note,
+        'next_assignment', r.next_assignment,
+        'updated_by', r.updated_by
       ) || coalesce(
         (select jsonb_object_agg(f.key, r.values -> f.key) from record_fields f
          where f.course_id = p_course_id and r.id is not null),

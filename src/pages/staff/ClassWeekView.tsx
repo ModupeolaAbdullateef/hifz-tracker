@@ -79,7 +79,7 @@ export default function ClassWeekView() {
 
   const recordedCount = roster.filter((r) => r.has_record).length
 
-  if (!course) return <EmptyState text="No courses yet. The admin can add one on the Courses tab." />
+  if (!course) return <EmptyState text="No courses yet. The admin can add one on the Course tab." />
 
   return (
     <div>
@@ -94,8 +94,8 @@ export default function ClassWeekView() {
             >
               {weeks.map((w) => (
                 <option key={w.week_number} value={w.week_number}>
-                  Week {w.week_number}
-                  {w.cancelled ? ' (cancelled)' : ''}
+                  Week {w.week_number} · {formatUKDate(w.class_date)}
+                  {w.cancelled ? ' (no class)' : ''}
                 </option>
               ))}
             </select>

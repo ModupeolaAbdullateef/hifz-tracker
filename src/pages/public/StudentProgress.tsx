@@ -3,13 +3,14 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import SiteHeader from '../../components/SiteHeader'
 import TipsMarquee from '../../components/TipsMarquee'
 import PublicNav from '../../components/PublicNav'
+import SiteFooter from '../../components/SiteFooter'
 import WeeklyGrid from '../../components/WeeklyGrid'
 import StudentSummary from '../../components/StudentSummary'
 import QuranProgress from '../../components/QuranProgress'
 import { ErrorBanner, LoadingState } from '../../components/LoadingAndEmpty'
 import { getActiveTips, getStudentRecord } from '../../lib/api'
 import { clearStudentSession, loadStudentSession, saveStudentSession } from '../../lib/session'
-import { formatUKDate, getCurrentWeekNumber } from '../../lib/dates'
+import { formatUKDate, getCurrentWeekNumber, todayLondonISO } from '../../lib/dates'
 import { memorisedPages } from '../../lib/quran'
 import type { StudentRecordBundle, Tip } from '../../lib/types'
 
@@ -58,8 +59,9 @@ export default function StudentProgress() {
   async function handleCodeSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!studentId) return
-    saveStudentSession({ studentId, code: codeInput.trim() })
-    await load(codeInput.trim())
+    const trimmed = codeInput.trim().toUpperCase()
+    saveStudentSession({ studentId, code: trimmed })
+    await load(trimmed)
   }
 
   if (loading) {
@@ -88,7 +90,7 @@ export default function StudentProgress() {
                   type="text"
                   value={codeInput}
                   onChange={(e) => setCodeInput(e.target.value)}
-                  placeholder="HZ-4821"
+                  placeholder="HZ-1234"
                   required
                 />
               </div>
@@ -107,12 +109,11 @@ export default function StudentProgress() {
   }
 
   const currentWeek = getCurrentWeekNumber(bundle.weeks)
-  const { student, course, totals } = bundle
-  const hasTarget = !!(student.target_pages ?? course.target_pages)
-  const target = student.target_pages ?? course.target_pages ?? 0
-  const targetReached = hasTarget && totals.new_hifz_total >= target
-  const courseFinished = currentWeek >= course.weeks
-  const canCertificate = courseFinished || targetReached
+  const { student, course } = bundle
+  // The certificate appears once the last week's class (week 10) has taken place.
+  const lastWeek = bundle.weeks[bundle.weeks.length - 1]
+  const lastWeekDate = lastWeek?.class_date
+  const canCertificate = !!lastWeekDate && lastWeekDate <= todayLondonISO()
 
   return (
     <div className="app-shell">
@@ -153,15 +154,21 @@ export default function StudentProgress() {
           />
         </div>
 
-        {canCertificate && (
+        {canCertificate ? (
           <div className="card text-center">
             <Link to={`/certificate/${student.id}`} className="btn btn-secondary">
               View certificate
             </Link>
           </div>
+        ) : (
+          lastWeekDate && (
+            <p className="muted text-center">
+              The certificate will appear here after the last class on {formatUKDate(lastWeekDate)}.
+            </p>
+          )
         )}
       </main>
-      <footer className="site-footer">Hifz Class</footer>
+      <SiteFooter />
     </div>
   )
 }

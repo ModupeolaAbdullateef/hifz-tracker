@@ -22,7 +22,7 @@ export default function Login() {
       await login(displayName.trim(), code.trim())
       navigate(returnTo)
     } catch {
-      setError('Incorrect name or access code.')
+      setError('That code did not work. Please check it and try again.')
     } finally {
       setBusy(false)
     }
@@ -34,7 +34,7 @@ export default function Login() {
       <main className="page page--narrow">
         <PublicNav />
         <div className="card">
-          <h2>Staff / Admin login</h2>
+          <h2>Staff login</h2>
           <form onSubmit={handleSubmit}>
             <div className="field">
               <label htmlFor="name">Your name</label>
@@ -46,9 +46,10 @@ export default function Login() {
                 required
                 autoComplete="name"
               />
+              <p className="field-hint">Only used so we can see who filled in each week.</p>
             </div>
             <div className="field">
-              <label htmlFor="code">Access code</label>
+              <label htmlFor="code">Code</label>
               <input
                 id="code"
                 type="password"
@@ -57,6 +58,7 @@ export default function Login() {
                 required
                 autoComplete="current-password"
               />
+              <p className="field-hint">You'll stay logged in on this device for 12 hours.</p>
             </div>
             {error && <ErrorBanner text={error} />}
             <button type="submit" className="btn btn-primary btn-block" disabled={busy}>

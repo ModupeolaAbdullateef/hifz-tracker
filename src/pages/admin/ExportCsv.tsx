@@ -1,22 +1,57 @@
 import { useState } from 'react'
 import AdminGuard from '../../components/AdminGuard'
 import { ErrorBanner } from '../../components/LoadingAndEmpty'
-import { exportClass } from '../../lib/api'
+import { exportClass, getRecordFieldsAdmin } from '../../lib/api'
 import { useAuth } from '../../context/AuthContext'
 import { useCourse } from '../../context/CourseContext'
+import type { RecordField } from '../../lib/types'
 
-function toCsv(rows: Record<string, unknown>[]): string {
-  if (rows.length === 0) return ''
-  const headers = Object.keys(rows[0])
+type Row = Record<string, unknown>
+type Column = { header: string; value: (row: Row) => unknown }
+
+function yesNo(v: unknown): string {
+  if (v === true) return 'Yes'
+  if (v === false) return 'No'
+  return ''
+}
+
+/** Spreadsheet columns in a fixed, readable order: student, week, attendance, each field, then notes. */
+function buildColumns(fields: RecordField[]): Column[] {
+  const fieldCols: Column[] = fields.map((f) => ({
+    header: f.unit ? `${f.label} (${f.unit})` : f.label,
+    value: (row) => (f.type === 'yesno' ? yesNo(row[f.key]) : row[f.key]),
+  }))
+  return [
+    { header: 'First name', value: (r) => r.student_first_name },
+    { header: 'Last name', value: (r) => r.student_last_name },
+    { header: 'Student code', value: (r) => r.student_code },
+    { header: 'Week', value: (r) => r.week_number },
+    { header: 'Date', value: (r) => r.class_date },
+    {
+      header: 'Attendance',
+      value: (r) => (r.cancelled ? 'No class' : r.status === 'present' ? 'Present' : r.status === 'absent' ? 'Absent' : ''),
+    },
+    { header: 'Good week', value: (r) => (r.status ? yesNo(r.good_week) : '') },
+    ...fieldCols,
+    { header: 'From page', value: (r) => r.hifz_from_page },
+    { header: 'To page', value: (r) => r.hifz_to_page },
+    { header: 'Note', value: (r) => r.note },
+    { header: 'Next homework', value: (r) => r.next_assignment },
+    { header: 'Filled in by', value: (r) => r.updated_by },
+  ]
+}
+
+function toCsv(rows: Row[], columns: Column[]): string {
   const escape = (v: unknown) => {
     const s = v === null || v === undefined ? '' : String(v)
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+    return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
   }
-  const lines = [headers.join(',')]
+  const lines = [columns.map((c) => escape(c.header)).join(',')]
   for (const row of rows) {
-    lines.push(headers.map((h) => escape(row[h])).join(','))
+    lines.push(columns.map((c) => escape(c.value(row))).join(','))
   }
-  return lines.join('\n')
+  // Excel expects CRLF line endings, and the BOM makes it read names with accents correctly.
+  return '﻿' + lines.join('\r\n')
 }
 
 export default function ExportCsv() {
@@ -30,8 +65,12 @@ export default function ExportCsv() {
     setBusy(true)
     setError(null)
     try {
-      const rows = await exportClass(session.token, course.id)
-      const csv = toCsv(rows)
+      const [rows, allFields] = await Promise.all([
+        exportClass(session.token, course.id),
+        getRecordFieldsAdmin(session.token, course.id),
+      ])
+      const fields = [...allFields].sort((a, b) => a.sort_order - b.sort_order)
+      const csv = toCsv(rows, buildColumns(fields))
       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -54,11 +93,12 @@ export default function ExportCsv() {
       <div className="card">
         <h2 className="mt-0">Export {course?.name ?? 'class'}</h2>
         <p className="muted">
-          Downloads one row per student per week, one column per field, for the course selected above.
+          Downloads everything as a spreadsheet that opens in Excel: one line per student for each week, with
+          attendance, every field, the teacher's note and next homework.
         </p>
         {error && <ErrorBanner text={error} />}
         <button className="btn btn-primary" onClick={handleExport} disabled={busy || !course}>
-          {busy ? 'Exporting…' : 'Export CSV'}
+          {busy ? 'Preparing…' : 'Download spreadsheet'}
         </button>
       </div>
     </AdminGuard>

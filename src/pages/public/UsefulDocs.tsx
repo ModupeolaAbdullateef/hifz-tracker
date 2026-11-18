@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import SiteHeader from '../../components/SiteHeader'
 import PublicNav from '../../components/PublicNav'
+import SiteFooter from '../../components/SiteFooter'
 import TipsMarquee from '../../components/TipsMarquee'
 import { EmptyState, ErrorBanner, LoadingState } from '../../components/LoadingAndEmpty'
 import { getActiveResources, getActiveTips } from '../../lib/api'
@@ -64,7 +65,7 @@ export default function UsefulDocs() {
           )}
         </div>
       </main>
-      <footer className="site-footer">Hifz Class</footer>
+      <SiteFooter />
     </div>
   )
 }

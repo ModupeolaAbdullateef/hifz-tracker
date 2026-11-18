@@ -59,13 +59,13 @@ function StaffShell() {
           <NavLink to="/staff" end>
             Find student
           </NavLink>
-          <NavLink to="/staff/week">This week</NavLink>
+          <NavLink to="/staff/week">This Thursday</NavLink>
           <NavLink to="/staff/overview">Class overview</NavLink>
           {isAdmin && (
             <>
               <NavLink to="/staff/admin/enquiries">Enquiries</NavLink>
               <NavLink to="/staff/admin/students">Students</NavLink>
-              <NavLink to="/staff/admin/course">Courses</NavLink>
+              <NavLink to="/staff/admin/course">Course</NavLink>
               <NavLink to="/staff/admin/fields">Fields</NavLink>
               <NavLink to="/staff/admin/tips">Tips</NavLink>
               <NavLink to="/staff/admin/docs">Docs</NavLink>

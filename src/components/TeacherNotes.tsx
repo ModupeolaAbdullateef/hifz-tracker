@@ -1,7 +1,7 @@
 import { formatUKDate } from '../lib/dates'
 import type { CourseWeek, WeeklyRecord } from '../lib/types'
 
-/** Every teacher note / next assignment for a student, newest week first, with who wrote it. */
+/** Every teacher note / next homework for a student, newest week first, with who wrote it. */
 export default function TeacherNotes({ records, weeks }: { records: WeeklyRecord[]; weeks: CourseWeek[] }) {
   const notes = records
     .filter((r) => r.note || r.next_assignment)
@@ -28,7 +28,7 @@ export default function TeacherNotes({ records, weeks }: { records: WeeklyRecord
             {r.note && <p className="note__text">{r.note}</p>}
             {r.next_assignment && (
               <p className="note__assignment">
-                <strong>Next assignment:</strong> {r.next_assignment}
+                <strong>Next homework:</strong> {r.next_assignment}
               </p>
             )}
             {author && <p className="note__author">— {author}</p>}

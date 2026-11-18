@@ -52,7 +52,7 @@ export default function ManageStudents() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, course?.id])
 
-  if (!course) return <EmptyState text="Add a course on the Courses tab before adding students." />
+  if (!course) return <EmptyState text="Add a course on the Course tab before adding students." />
 
   const formCourseId = form.courseId ?? course.id
   const formCourse = courses.find((c) => c.id === formCourseId) ?? course
@@ -72,7 +72,11 @@ export default function ManageStudents() {
         targetPages: form.targetPages === '' ? null : Number(form.targetPages),
       })
       const movedTo = formCourseId !== course.id ? ` and moved to ${formCourse.name}` : ''
-      setMessage(form.id ? `Student updated${movedTo}.` : `Student added to ${formCourse.name} — code ${result.student_code}.`)
+      setMessage(
+        form.id
+          ? `Student updated${movedTo}.`
+          : `${form.firstName.trim()} added to ${formCourse.name}. Their code is ${result.student_code}. Write it down: parents need it to see the record.`,
+      )
       setForm(emptyForm)
       await Promise.all([load(), refreshCourses()])
     } catch (e) {
@@ -238,7 +242,11 @@ export default function ManageStudents() {
                         <button className="btn btn-ghost btn-sm" onClick={() => handleRegenerate(s)}>
                           New code
                         </button>
-                        <button className="btn btn-ghost btn-sm" onClick={() => toggleActive(s)}>
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => toggleActive(s)}
+                          title={s.active ? 'Hides them from the teaching pages and the parent search' : 'Brings them back'}
+                        >
                           {s.active ? 'Deactivate' : 'Reactivate'}
                         </button>
                         {confirmDelete === s.id ? (

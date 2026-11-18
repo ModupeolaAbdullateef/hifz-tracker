@@ -66,10 +66,16 @@ export default function RecordEditSheet({
 
   function buildPayload() {
     const present = status === 'present'
+    // Tick boxes save an explicit "No" when left unticked, so the grid and the
+    // export show No rather than a blank.
+    const presentValues: RecordValues = { ...values }
+    for (const f of fields) {
+      if (f.type === 'yesno' && presentValues[f.key] !== true) presentValues[f.key] = false
+    }
     return {
       status,
-      goodWeek,
-      values: present ? values : {},
+      goodWeek: present && goodWeek,
+      values: present ? presentValues : {},
       note: note.trim() ? note.trim() : null,
       nextAssignment: nextAssignment.trim() ? nextAssignment.trim() : null,
       fromPage: present && fromPage ? Number(fromPage) : null,
@@ -164,24 +170,15 @@ export default function RecordEditSheet({
                     }
                   />
                 ) : (
-                  <div className="toggle-group">
-                    <button
-                      type="button"
-                      data-variant="yes"
-                      className={values[field.key] === true ? 'is-active' : ''}
-                      onClick={() => setFieldValue(field.key, true)}
-                    >
-                      Yes
-                    </button>
-                    <button
-                      type="button"
-                      data-variant="no"
-                      className={values[field.key] === false ? 'is-active' : ''}
-                      onClick={() => setFieldValue(field.key, false)}
-                    >
-                      No
-                    </button>
-                  </div>
+                  <label className="tick-box" htmlFor={`f-${field.key}`}>
+                    <input
+                      id={`f-${field.key}`}
+                      type="checkbox"
+                      checked={values[field.key] === true}
+                      onChange={(e) => setFieldValue(field.key, e.target.checked)}
+                    />
+                    <span>{values[field.key] === true ? 'Done' : 'Tick if done'}</span>
+                  </label>
                 )}
               </div>
             ))}
@@ -235,7 +232,7 @@ export default function RecordEditSheet({
           <textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} />
         </div>
         <div className="field">
-          <label htmlFor="next">Next assignment</label>
+          <label htmlFor="next">Next homework</label>
           <textarea id="next" value={nextAssignment} onChange={(e) => setNextAssignment(e.target.value)} />
         </div>
 

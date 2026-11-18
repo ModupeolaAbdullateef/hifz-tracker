@@ -1,6 +1,6 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
-import { staffLogout } from '../lib/api'
+import { SESSION_EXPIRED_EVENT, staffLogout } from '../lib/api'
 import { clearStaffSession, loadStaffSession, saveStaffSession } from '../lib/session'
 import type { StaffSession } from '../lib/types'
 
@@ -32,6 +32,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     saveStaffSession(newSession)
     setSession(newSession)
   }, [])
+
+  // After 12 hours (or if the server rejects the login) drop the session so
+  // the staff pages send the user back to the login screen.
+  useEffect(() => {
+    if (!session) return
+    const expire = () => {
+      clearStaffSession()
+      setSession(null)
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, expire)
+    const ms = new Date(session.expires_at).getTime() - Date.now()
+    const timer = window.setTimeout(expire, Math.max(0, Math.min(ms, 2 ** 31 - 1)))
+    return () => {
+      window.removeEventListener(SESSION_EXPIRED_EVENT, expire)
+      window.clearTimeout(timer)
+    }
+  }, [session])
 
   const logout = useCallback(async () => {
     if (session) {

@@ -3,13 +3,24 @@ import type { StaffSession } from './types'
 const STAFF_KEY = 'hifz_staff_session'
 const STUDENT_KEY = 'hifz_student_session'
 
-export function loadStaffSession(): StaffSession | null {
-  const raw = sessionStorage.getItem(STAFF_KEY)
-  if (!raw) return null
+// Staff sessions live in localStorage so they survive closing the tab or the
+// browser: the server issues them for 12 hours, and the login screen only
+// comes back once that time is up.
+function staffStore(): Storage | null {
   try {
+    return window.localStorage
+  } catch {
+    return null
+  }
+}
+
+export function loadStaffSession(): StaffSession | null {
+  try {
+    const raw = staffStore()?.getItem(STAFF_KEY) ?? sessionStorage.getItem(STAFF_KEY)
+    if (!raw) return null
     const session = JSON.parse(raw) as StaffSession
     if (new Date(session.expires_at).getTime() <= Date.now()) {
-      sessionStorage.removeItem(STAFF_KEY)
+      clearStaffSession()
       return null
     }
     return session
@@ -19,11 +30,20 @@ export function loadStaffSession(): StaffSession | null {
 }
 
 export function saveStaffSession(session: StaffSession) {
-  sessionStorage.setItem(STAFF_KEY, JSON.stringify(session))
+  try {
+    staffStore()?.setItem(STAFF_KEY, JSON.stringify(session))
+  } catch {
+    // Storage blocked (private mode): the session lasts for this page only.
+  }
 }
 
 export function clearStaffSession() {
-  sessionStorage.removeItem(STAFF_KEY)
+  try {
+    staffStore()?.removeItem(STAFF_KEY)
+    sessionStorage.removeItem(STAFF_KEY)
+  } catch {
+    // ignore
+  }
 }
 
 const COURSE_KEY = 'hifz_selected_course'

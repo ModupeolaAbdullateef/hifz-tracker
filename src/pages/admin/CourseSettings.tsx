@@ -290,10 +290,10 @@ export default function CourseSettings() {
                     <tr key={w.week_number}>
                       <td>{w.week_number}</td>
                       <td>{formatUKDate(w.class_date)}</td>
-                      <td>{w.cancelled ? 'Cancelled' : 'Scheduled'}</td>
+                      <td>{w.cancelled ? <span className="cell-tag cell-tag--absent">No class</span> : 'Class'}</td>
                       <td>
                         <button className="btn btn-ghost btn-sm" onClick={() => toggleCancelled(w)}>
-                          {w.cancelled ? 'Reinstate' : 'Cancel (holiday)'}
+                          {w.cancelled ? 'Undo (class is on)' : 'Cancel (holiday)'}
                         </button>
                       </td>
                     </tr>

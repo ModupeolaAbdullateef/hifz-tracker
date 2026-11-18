@@ -11,3 +11,6 @@ vite.config.d.ts
 
 # Contains real access codes — never commit to the public repo.
 TEACHER-TESTING-GUIDE.md
+
+# Private: contains staff login codes. Never commit.
+Hifz-Website-Testing-Guide.pdf

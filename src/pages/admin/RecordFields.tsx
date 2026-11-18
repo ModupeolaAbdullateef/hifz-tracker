@@ -38,7 +38,7 @@ export default function RecordFields() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, course?.id])
 
-  if (!course) return <EmptyState text="Add a course on the Courses tab first." />
+  if (!course) return <EmptyState text="Add a course on the Course tab first." />
 
   function startEdit(f: RecordField) {
     setEditingKey(f.key)

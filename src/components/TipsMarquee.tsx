@@ -13,7 +13,7 @@ function shuffle<T>(arr: T[]): T[] {
 function categoryLabel(category: Tip['category']): string {
   if (category === 'technique') return 'Technique'
   if (category === 'schedule') return 'Schedule'
-  return 'Announcement'
+  return '📣 Announcement'
 }
 
 export default function TipsMarquee({ tips }: { tips: Tip[] }) {
@@ -43,7 +43,7 @@ export default function TipsMarquee({ tips }: { tips: Tip[] }) {
     const tip = shuffled[activeIndex % shuffled.length]
     return (
       <div className="tips-marquee" role="region" aria-label="Tips">
-        <div className="tips-fade" key={tip.id}>
+        <div className={`tips-fade tips-fade--${tip.category}`} key={tip.id}>
           <span className={`tips-marquee__tag tips-marquee__tag--${tip.category}`}>
             {categoryLabel(tip.category)}
           </span>{' '}
@@ -59,7 +59,7 @@ export default function TipsMarquee({ tips }: { tips: Tip[] }) {
     <div className="tips-marquee" role="region" aria-label="Tips" tabIndex={0}>
       <div className="tips-marquee__track">
         {doubled.map((tip, i) => (
-          <div className="tips-marquee__item" key={`${tip.id}-${i}`}>
+          <div className={`tips-marquee__item tips-marquee__item--${tip.category}`} key={`${tip.id}-${i}`}>
             <span className={`tips-marquee__tag tips-marquee__tag--${tip.category}`}>
               {categoryLabel(tip.category)}
             </span>

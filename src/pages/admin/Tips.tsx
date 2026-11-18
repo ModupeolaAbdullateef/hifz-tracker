@@ -92,6 +92,9 @@ export default function Tips() {
               <option value="schedule">Schedule</option>
               <option value="announcement">Announcement</option>
             </select>
+            <p className="field-hint">
+              Tips scroll along the top of the front page. Announcements are shown in bold with a 📣 so they stand out.
+            </p>
           </div>
           <div className="field">
             <label htmlFor="text">Text</label>
@@ -122,7 +125,7 @@ export default function Tips() {
               <li key={t.id}>
                 <div className="flex-between" style={{ padding: '0.75rem 1rem' }}>
                   <div>
-                    <span className="pill pill--ontrack">{t.category}</span> {t.text}
+                    <span className={`pill ${t.category === 'announcement' ? 'pill--behind' : 'pill--ontrack'}`}>{t.category}</span> {t.text}
                   </div>
                   <div className="flex gap-2 flex-wrap">
                     <button className="btn btn-ghost btn-sm" onClick={() => startEdit(t)}>

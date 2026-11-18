@@ -10,7 +10,7 @@ export default function PublicNav() {
       </NavLink>
       <NavLink to="/record">My Record</NavLink>
       <NavLink to="/docs">Useful Docs</NavLink>
-      <NavLink to={session ? '/staff' : '/staff/login'}>{session ? 'Staff area' : 'Staff / Admin login'}</NavLink>
+      <NavLink to={session ? '/staff' : '/staff/login'}>{session ? 'Staff area' : 'Staff login'}</NavLink>
     </nav>
   )
 }

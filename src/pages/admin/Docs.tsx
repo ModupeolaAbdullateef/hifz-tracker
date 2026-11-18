@@ -136,8 +136,13 @@ export default function Docs() {
           </div>
           <div className="field">
             <label htmlFor="doc-file">File</label>
-            <input id="doc-file" type="file" ref={fileInputRef} />
-            <p className="field-hint">PDF, Word doc, image, or text file — up to {formatFileSize(MAX_SIZE_BYTES)}.</p>
+            <input
+              id="doc-file"
+              type="file"
+              ref={fileInputRef}
+              accept=".pdf,.doc,.docx,.txt,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,image/jpeg,image/png,image/webp"
+            />
+            <p className="field-hint">PDF, Word document, photo or text file, up to {formatFileSize(MAX_SIZE_BYTES)}.</p>
           </div>
           {error && <ErrorBanner text={error} />}
           {message && <SuccessBanner text={message} />}
